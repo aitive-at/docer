@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import io
-import json
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
@@ -156,10 +155,50 @@ def scanner_detail(request: HttpRequest, account_slug: str, scanner_slug: str) -
         {
             "account": account,
             "scanner": scanner,
-            "schema_pretty": json.dumps(scanner.schema_json, indent=2),
+            "schema_fields": (scanner.schema_json or {}).get("fields", []),
             "recent_scans": recent,
+            "scan_count": scanner.scans.count(),
         },
     )
+
+
+@login_required
+def scanner_copy(request: HttpRequest, account_slug: str, scanner_slug: str) -> HttpResponse:
+    deny = _require_member(request)
+    if deny:
+        return deny
+    if request.method != "POST":
+        return redirect("web:scanner_detail", account_slug=account_slug, scanner_slug=scanner_slug)
+    account = request.account
+    src = get_object_or_404(Scanner, account=account, slug=scanner_slug)
+    copy = Scanner(
+        account=account,
+        name=f"{src.name} (copy)",
+        description=src.description,
+        priming_prompt=src.priming_prompt,
+        language_hint=src.language_hint,
+        model_override=src.model_override,
+        schema_json=src.schema_json,
+    )
+    copy.slug = copy.make_unique_slug(copy.name)
+    copy.save()
+    messages.success(request, f"Copied to “{copy.name}”.")
+    return redirect("web:scanner_edit", account_slug=account.slug, scanner_slug=copy.slug)
+
+
+@login_required
+def scanner_delete(request: HttpRequest, account_slug: str, scanner_slug: str) -> HttpResponse:
+    deny = _require_member(request)
+    if deny:
+        return deny
+    if request.method != "POST":
+        return redirect("web:scanner_detail", account_slug=account_slug, scanner_slug=scanner_slug)
+    account = request.account
+    scanner = get_object_or_404(Scanner, account=account, slug=scanner_slug)
+    name = scanner.name
+    scanner.delete()
+    messages.success(request, f"Deleted scanner “{name}”.")
+    return redirect("web:scanner_list", account_slug=account.slug)
 
 
 @login_required

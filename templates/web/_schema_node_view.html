@@ -1,0 +1,93 @@
+{# Recursive read-only renderer for a Scanner.schema_json node.
+
+   Caller passes:
+     node      - dict (the schema node)
+     depth     - integer recursion depth (start at 0)
+     max_depth - integer (matches the editor's limit so deep structures
+                 are flagged the same way visually)
+
+   Mirrors the visual structure of templates/web/_schema_node.html but
+   without any Alpine bindings — pure server-rendered, no edit affordances.
+#}
+<div class="schema-node schema-node-{{ node.kind|default:'field' }}">
+  <div class="schema-node-header">
+    <span class="kind-badge kind-{{ node.kind|default:'field' }}">{{ node.kind|default:'field' }}</span>
+    <span class="node-name mono">{{ node.name|default:'—' }}</span>
+    <span class="node-label">{{ node.label|default:'' }}</span>
+  </div>
+
+  {% if node.kind == 'object' %}
+    <div class="schema-node-body">
+      <div class="schema-container-meta">
+        <span class="mono muted">{% if node.required %}object required{% else %}object optional{% endif %}</span>
+      </div>
+      <div class="mono nested-heading">Fields</div>
+      {% if depth < max_depth %}
+        {% for child in node.fields %}
+          {% include "web/_schema_node_view.html" with node=child depth=depth|add:1 max_depth=max_depth %}
+        {% empty %}
+          <div class="muted small-empty">No fields.</div>
+        {% endfor %}
+      {% else %}
+        <div class="muted small-empty">Maximum nesting depth reached ({{ max_depth }}).</div>
+      {% endif %}
+    </div>
+
+  {% elif node.kind == 'list' %}
+    <div class="schema-node-body">
+      <div class="schema-container-meta">
+        <span class="mono">Min rows: {{ node.options.min_items|default:0 }}</span>
+        <span class="muted">{% if node.options.min_items %}at least {{ node.options.min_items }} row(s) required{% else %}rows optional{% endif %}</span>
+      </div>
+      <div class="mono nested-heading">Fields per row</div>
+      {% if depth < max_depth %}
+        {% for child in node.item.fields %}
+          {% include "web/_schema_node_view.html" with node=child depth=depth|add:1 max_depth=max_depth %}
+        {% empty %}
+          <div class="muted small-empty">No fields per row.</div>
+        {% endfor %}
+      {% else %}
+        <div class="muted small-empty">Maximum nesting depth reached ({{ max_depth }}).</div>
+      {% endif %}
+    </div>
+
+  {% else %}
+    {# kind == 'field' (or default) #}
+    <div class="schema-node-body">
+      <div class="row">
+        <div class="col"><span class="muted mono">type</span> <strong>{{ node.data_type|default:'string' }}</strong></div>
+        <div class="col"><span class="muted mono">required</span>
+          {% if node.required %}<strong>yes</strong>{% else %}<span class="muted">no</span>{% endif %}
+        </div>
+      </div>
+      {% if node.description %}
+        <div class="field-description muted">{{ node.description }}</div>
+      {% endif %}
+
+      {% if node.data_type == 'enum' or node.data_type == 'open_enum' %}
+        <div class="enum-summary">
+          <span class="mono muted">Allowed values</span>
+          {% if node.options.values %}
+            <ul class="enum-list">
+              {% for v in node.options.values %}
+                <li><span class="mono">{{ v.id }}</span> <span class="muted">= {{ v.label|default:v.id }}</span></li>
+              {% endfor %}
+            </ul>
+          {% else %}
+            <span class="muted small-empty">No values defined.</span>
+          {% endif %}
+        </div>
+      {% endif %}
+
+      {% if node.data_type == 'currency_amount' and node.options.default_currency %}
+        <div class="muted mono small-meta">Default currency: {{ node.options.default_currency }}</div>
+      {% endif %}
+      {% if node.data_type == 'phone' and node.options.default_region %}
+        <div class="muted mono small-meta">Default region: {{ node.options.default_region }}</div>
+      {% endif %}
+      {% if node.data_type == 'decimal' and node.options.precision %}
+        <div class="muted mono small-meta">Decimal places: {{ node.options.precision }}</div>
+      {% endif %}
+    </div>
+  {% endif %}
+</div>
