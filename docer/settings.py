@@ -19,9 +19,8 @@ SECRET_KEY = os.environ.get(
 )
 DEBUG = os.environ.get("DJANGO_DEBUG", "1") == "1"
 ALLOWED_HOSTS = os.environ.get(
-    "DJANGO_ALLOWED_HOSTS",
-    "localhost,127.0.0.1,testserver",
-).split(",") + [os.environ.get("FLY_APP_NAME", "") + ".fly.dev"]
+    "DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1,testserver"
+).split(",")
 
 INSTALLED_APPS = [
     "django.contrib.admin",
