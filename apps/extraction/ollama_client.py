@@ -60,9 +60,15 @@ def encode_image_b64(path_or_bytes: str | Path | bytes) -> str:
 class OllamaClient:
     """Small synchronous Ollama HTTP client."""
 
-    def __init__(self, host: str | None = None, timeout: float | None = None):
+    def __init__(
+        self,
+        host: str | None = None,
+        timeout: float | None = None,
+        api_key: str | None = None,
+    ):
         self._host = host
         self._timeout = timeout
+        self._api_key = api_key
 
     @property
     def host(self) -> str:
@@ -80,10 +86,25 @@ class OllamaClient:
 
         return float(settings.DOCER_OLLAMA_TIMEOUT)
 
+    @property
+    def api_key(self) -> str | None:
+        if self._api_key is not None:
+            return self._api_key or None
+        from django.conf import settings
+
+        return getattr(settings, "OLLAMA_API_KEY", "") or None
+
     # ------------------------------------------------------------------ helpers
 
     def _client(self) -> httpx.Client:
-        return httpx.Client(base_url=self.host.rstrip("/"), timeout=self.timeout)
+        headers: dict[str, str] = {}
+        if self.api_key:
+            headers["Authorization"] = f"Bearer {self.api_key}"
+        return httpx.Client(
+            base_url=self.host.rstrip("/"),
+            timeout=self.timeout,
+            headers=headers or None,
+        )
 
     @staticmethod
     def _is_unavailable(exc: Exception) -> bool:
