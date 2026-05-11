@@ -128,7 +128,8 @@ def run_extraction(scan: Scan) -> None:
         {"role": "user", "content": prompt.user, "images": page_b64},
     ]
 
-    for attempt_no in range(1, 3):
+    max_attempts = max(1, int(getattr(settings, "DOCER_EXTRACTION_MAX_ATTEMPTS", 3)))
+    for attempt_no in range(1, max_attempts + 1):
         try:
             t0 = time.monotonic()
             result = client.chat(

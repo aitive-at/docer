@@ -132,11 +132,13 @@ class OllamaClient:
         names = {m.get("name") for m in tags.get("models", [])}
         if model in names:
             return True
-        # Ollama Cloud quirk: /api/chat requires the "-cloud" routing suffix
-        # (e.g. "gemma4:31b-cloud") but /api/tags lists canonical names
-        # ("gemma4:31b"). Treat the suffix as an alias for the base tag.
-        if model.endswith("-cloud") and model.removesuffix("-cloud") in names:
-            return True
+        # Ollama Cloud quirk: /api/chat requires a cloud-routing suffix but
+        # /api/tags lists canonical names. The suffix varies per model family:
+        # gemma4 uses "-cloud" appended to the size tag (gemma4:31b-cloud),
+        # kimi-k2.6 uses ":cloud" as the whole tag (kimi-k2.6:cloud). Try both.
+        for suffix in ("-cloud", ":cloud"):
+            if model.endswith(suffix) and model.removesuffix(suffix) in names:
+                return True
         return False
 
     def chat(

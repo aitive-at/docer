@@ -52,12 +52,10 @@
 </form>
 </div>
 
-{{ editor_data_types|json_script:"docer-data-types" }}
 {{ editor_initial_schema|json_script:"docer-initial-schema" }}
 
 <script>
 (function () {
-  const DATA_TYPES = JSON.parse(document.getElementById('docer-data-types').textContent);
   const INITIAL_SCHEMA_RAW = JSON.parse(document.getElementById('docer-initial-schema').textContent);
 
   let nextId = 1;
@@ -101,7 +99,6 @@
   window.schemaEditor = function () {
     return {
       tree: [],
-      dataTypes: DATA_TYPES,
       init() {
         const initial = (INITIAL_SCHEMA_RAW && Array.isArray(INITIAL_SCHEMA_RAW.fields))
           ? JSON.parse(JSON.stringify(INITIAL_SCHEMA_RAW.fields))

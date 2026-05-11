@@ -33,7 +33,6 @@ def test_scanner_create_form_has_no_language_or_model_inputs(client_user_account
     assert 'name="language_hint"' not in body
     assert 'name="model_override"' not in body
     # Editor wiring should be present.
-    assert 'id="docer-data-types"' in body
     assert 'id="docer-initial-schema"' in body
     assert 'name="schema_json_text"' in body
 

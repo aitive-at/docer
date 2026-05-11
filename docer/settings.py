@@ -139,6 +139,9 @@ OLLAMA_HOST = os.environ.get("OLLAMA_HOST", "http://localhost:11434")
 OLLAMA_API_KEY = os.environ.get("OLLAMA_API_KEY", "")
 DOCER_DEFAULT_MODEL = os.environ.get("DOCER_DEFAULT_MODEL", "gemma4:31b")
 DOCER_OLLAMA_TIMEOUT = float(os.environ.get("DOCER_OLLAMA_TIMEOUT", "600"))
+# Max times to ask the model for valid JSON before giving up on a scan.
+# Each retry sends a corrective "your previous reply was not valid JSON" turn.
+DOCER_EXTRACTION_MAX_ATTEMPTS = int(os.environ.get("DOCER_EXTRACTION_MAX_ATTEMPTS", "3"))
 DOCER_PDF_RENDER_DPI = int(os.environ.get("DOCER_PDF_RENDER_DPI", "180"))
 
 # --- Huey ---
