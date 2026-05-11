@@ -14,4 +14,9 @@ def create_personal_account(user: User, *, base_name: str | None = None) -> Acco
         slug=Account.make_unique_slug(name),
     )
     Membership.objects.create(account=account, user=user, role=Membership.OWNER)
+    # Deferred import: apps.scanners depends on apps.accounts at model-load time,
+    # so importing at module top would create an import cycle.
+    from apps.scanners.templates import seed_default_scanners
+
+    seed_default_scanners(account)
     return account

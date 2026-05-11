@@ -110,12 +110,20 @@ STATIC_URL = "static/"
 STATICFILES_DIRS = [BASE_DIR / "static"]
 STATIC_ROOT = BASE_DIR / "staticfiles"
 
+# WhiteNoise's manifest backend is production-only: it hard-fails on any
+# {% static %} reference that isn't in staticfiles.json, which is only created
+# by `collectstatic`. In dev / tests we want {% static %} to resolve against
+# STATICFILES_DIRS on the fly, so fall back to Django's plain backend.
 STORAGES = {
     "default": {
         "BACKEND": "django.core.files.storage.FileSystemStorage",
     },
     "staticfiles": {
-        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+        "BACKEND": (
+            "whitenoise.storage.CompressedManifestStaticFilesStorage"
+            if not DEBUG
+            else "django.contrib.staticfiles.storage.StaticFilesStorage"
+        ),
     },
 }
 

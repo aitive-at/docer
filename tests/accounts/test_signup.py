@@ -84,3 +84,28 @@ def test_login_uses_email_as_username():
     c.logout()
     resp = c.post(reverse("auth:login"), data={"username": "bob@example.com", "password": "secret123"})
     assert resp.status_code in (302, 303), resp.content[:500]
+
+
+@pytest.mark.django_db
+def test_signup_seeds_invoice_template_scanner():
+    """New accounts should get a starter Invoice scanner so the demo is usable
+    without first authoring a schema."""
+    from apps.scanners.models import Scanner
+
+    c = Client()
+    c.post(
+        reverse("auth:signup"),
+        data={"email": "carol@example.com", "password": "secret123"},
+    )
+    account = Account.objects.get(memberships__user__email__iexact="carol@example.com")
+    scanners = list(Scanner.objects.filter(account=account))
+    assert len(scanners) == 1, scanners
+    scanner = scanners[0]
+    assert scanner.name == "Invoice"
+    field_names = {f["name"] for f in scanner.schema_json["fields"]}
+    assert field_names == {"invoice_number", "gross_amount"}
+    gross = next(f for f in scanner.schema_json["fields"] if f["name"] == "gross_amount")
+    assert gross["data_type"] == "currency_amount"
+    assert gross["required"] is True
+    # Multilingual: blank language_hint lets the LLM detect language from the doc.
+    assert scanner.language_hint == ""
