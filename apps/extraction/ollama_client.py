@@ -130,7 +130,14 @@ class OllamaClient:
         except OllamaError:
             return False
         names = {m.get("name") for m in tags.get("models", [])}
-        return model in names
+        if model in names:
+            return True
+        # Ollama Cloud quirk: /api/chat requires the "-cloud" routing suffix
+        # (e.g. "gemma4:31b-cloud") but /api/tags lists canonical names
+        # ("gemma4:31b"). Treat the suffix as an alias for the base tag.
+        if model.endswith("-cloud") and model.removesuffix("-cloud") in names:
+            return True
+        return False
 
     def chat(
         self,
