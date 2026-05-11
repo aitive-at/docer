@@ -2,6 +2,7 @@
 
 Tuned for local dev with SQLite. Production deployment is out of scope for v1.
 """
+
 from __future__ import annotations
 
 import os
@@ -18,8 +19,9 @@ SECRET_KEY = os.environ.get(
 )
 DEBUG = os.environ.get("DJANGO_DEBUG", "1") == "1"
 ALLOWED_HOSTS = os.environ.get(
-    "DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1,testserver"
-).split(",")
+    "DJANGO_ALLOWED_HOSTS",
+    "localhost,127.0.0.1,testserver",
+).split(",") + [os.environ.get("FLY_APP_NAME", "") + ".fly.dev"]
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -84,8 +86,10 @@ LOGIN_REDIRECT_URL = "/"
 LOGOUT_REDIRECT_URL = "/auth/login"
 
 AUTH_PASSWORD_VALIDATORS = [
-    {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",
-     "OPTIONS": {"min_length": 6}},
+    {
+        "NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",
+        "OPTIONS": {"min_length": 6},
+    },
 ]
 
 LANGUAGE_CODE = "en-us"
