@@ -9,6 +9,10 @@ wheels/
 # Virtual environments
 .venv
 
+# Local environment overrides — never commit, contains secrets
+.env
+.env.local
+
 media/
 
 db.sqlite3
