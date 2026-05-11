@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}Scan #{{ scan.id }} · {{ account.name }}{% endblock %}
+{% block content %}
+<section class="hero">
+  <span class="mono">// Scan #{{ scan.id }}</span>
+  <h1>{{ scan.file.original_name }}</h1>
+  <p class="muted">Scanner: <a href="{% url 'web:scanner_detail' account_slug=account.slug scanner_slug=scan.scanner.slug %}">{{ scan.scanner.name }}</a> · {{ scan.created_at|date:"Y-m-d H:i" }}</p>
+</section>
+
+<div class="spacer"></div>
+
+{% include "web/_scan_progress.html" %}
+
+<div class="spacer"></div>
+
+<div id="scan-result-panel">
+  {% include "web/_scan_result_panel.html" %}
+</div>
+{% endblock %}

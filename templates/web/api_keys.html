@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}API keys · {{ account.name }}{% endblock %}
+{% block content %}
+<section class="hero">
+  <span class="mono">// API keys</span>
+  <h1>Programmatic access</h1>
+  <p class="muted">Use a Bearer token in the <code class="mono">Authorization</code> header against <code class="mono">/api/v1/{{ account.slug }}/...</code></p>
+</section>
+
+<div class="spacer"></div>
+
+{% if new_key_plaintext %}
+<div class="card" style="border-color: var(--accent);">
+  <span class="mono">New key — copy now, you won't see it again</span>
+  <pre class="mono" style="word-break:break-all;">{{ new_key_plaintext }}</pre>
+</div>
+<div class="spacer"></div>
+{% endif %}
+
+<div class="card">
+  <span class="mono">Create new key</span>
+  <form method="post" style="display:flex; gap:0.6rem; align-items:flex-end; flex-wrap:wrap;">{% csrf_token %}
+    <div class="field" style="flex:1; min-width:240px;">
+      <label>Key name</label>{{ form.name }}
+    </div>
+    <button class="btn-primary" type="submit">Create</button>
+  </form>
+</div>
+
+<div class="spacer"></div>
+
+<div class="card">
+  <span class="mono">Existing keys</span>
+  {% if keys %}
+    <table class="data">
+      <thead><tr><th>Name</th><th>Prefix</th><th>Created</th><th>Last used</th><th>Status</th><th></th></tr></thead>
+      <tbody>
+      {% for k in keys %}
+      <tr>
+        <td>{{ k.name }}</td>
+        <td class="mono">{{ k.key_prefix }}…</td>
+        <td class="muted">{{ k.created_at|date:"Y-m-d" }}</td>
+        <td class="muted">{{ k.last_used_at|date:"Y-m-d H:i"|default:"—" }}</td>
+        <td>{% if k.revoked_at %}<span class="pill failed">revoked</span>{% else %}<span class="pill completed">active</span>{% endif %}</td>
+        <td>{% if not k.revoked_at %}
+          <form method="post" class="inline-form">{% csrf_token %}<button class="link-button" type="submit" name="revoke" value="{{ k.id }}">revoke</button></form>
+        {% endif %}</td>
+      </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  {% else %}<p class="muted">No keys yet.</p>{% endif %}
+</div>
+{% endblock %}

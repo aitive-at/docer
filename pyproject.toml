@@ -1,0 +1,42 @@
+[project]
+name = "docer"
+version = "0.1.0"
+description = "LLM/Vision document scanning and structured data extraction (Django + Ollama)."
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "django>=5.1,<6.1",
+    "djangorestframework>=3.15",
+    "huey>=2.5",
+    "httpx>=0.27",
+    "pypdfium2>=4.30",
+    "Pillow>=11.0",
+    "python-stdnum>=1.20",
+    "phonenumbers>=8.13",
+    "email-validator>=2.2",
+    "python-dateutil>=2.9",
+    "Babel>=2.16",
+    "python-slugify>=8.0",
+    "python-dotenv>=1.0",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3",
+    "pytest-django>=4.9",
+    "pytest-xdist>=3.6",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["docer", "apps"]
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "docer.settings"
+python_files = ["test_*.py", "*_test.py"]
+addopts = "-x -ra"
+testpaths = ["tests"]
+markers = ["live_ollama: requires a reachable local Ollama server"]

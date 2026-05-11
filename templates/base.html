@@ -1,0 +1,61 @@
+{% load static %}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}{{ brand_name }}{% endblock %}</title>
+  <link rel="stylesheet" href="{% static 'css/theme.css' %}">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:wght@400;700&family=Outfit:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/htmx.org@2.0.3" defer></script>
+  <script src="https://unpkg.com/alpinejs@3.14.1/dist/cdn.min.js" defer></script>
+</head>
+<body>
+  <header class="site-header">
+    <div class="container site-header-inner">
+      <a class="brand" href="/">
+        <span class="brand-name">{{ brand_name }}</span>
+        <span class="brand-tagline">{{ brand_tagline }}</span>
+      </a>
+      <nav class="primary-nav">
+        {% if user.is_authenticated %}
+          {% if current_account %}
+            <a href="/{{ current_account.slug }}/">Dashboard</a>
+            <a href="/{{ current_account.slug }}/scanners/">Scanners</a>
+            <a href="/{{ current_account.slug }}/settings/api-keys">API Keys</a>
+          {% endif %}
+          <form method="post" action="{% url 'auth:logout' %}" class="inline-form">{% csrf_token %}<button class="link-button" type="submit">Sign out</button></form>
+        {% else %}
+          <a href="{% url 'auth:login' %}">Sign in</a>
+          <a class="btn-primary" href="{% url 'auth:signup' %}">Sign up</a>
+        {% endif %}
+      </nav>
+    </div>
+  </header>
+  <main class="container">
+    {% if messages %}
+      <ul class="messages">
+        {% for m in messages %}<li class="message {{ m.tags }}">{{ m }}</li>{% endfor %}
+      </ul>
+    {% endif %}
+    {% block content %}{% endblock %}
+  </main>
+  <footer class="site-footer">
+    <div class="container site-footer-inner">
+      <div class="footer-mark">
+        <span class="brand-name">{{ brand_name }}</span>
+        <span class="muted"> — by </span>
+        <a class="footer-company" href="https://aitivedata.com" target="_blank" rel="noopener">aitiveData</a>
+      </div>
+      <nav class="footer-nav">
+        <a href="https://aitivedata.com" target="_blank" rel="noopener">aitivedata.com</a>
+        <a href="https://aitivedata.com#contact" target="_blank" rel="noopener">Contact</a>
+        <a href="https://aitivedata.com#legal" target="_blank" rel="noopener">Legal</a>
+      </nav>
+      <p class="footer-legal mono">© {% now "Y" %} aitiveData · Data · AI · IT Solutions · All rights reserved</p>
+    </div>
+  </footer>
+</body>
+</html>

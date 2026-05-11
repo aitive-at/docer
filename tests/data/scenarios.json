@@ -1,0 +1,22 @@
+[
+  {
+    "name": "DE invoice — Rechnungs Nummer",
+    "pdf": "Rechnung 240010439.pdf",
+    "extractor": {
+      "name": "smoke-rechnungsnummer",
+      "description": "Smoke-test extractor that pulls the German invoice number off a single-page PDF.",
+      "language_hint": "de",
+      "fields": [
+        {
+          "name": "Rechnungs Nummer",
+          "description": "Die eindeutige Rechnungsnummer (the invoice number printed on the document, often labeled 'Rechnung-Nr.', 'Rechnungsnummer', or 'Rechnung').",
+          "data_type": "string",
+          "required": true
+        }
+      ]
+    },
+    "expected": {
+      "Rechnungs Nummer": "240010439"
+    }
+  }
+]

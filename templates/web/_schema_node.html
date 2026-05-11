@@ -1,0 +1,82 @@
+{# Recursive schema-node renderer.
+
+   Caller passes Alpine-expression aliases as Django template variables:
+     node          - Alpine expression for *this* node (e.g. "node", "c0", "c2")
+     parent_array  - Alpine expression for the array this node lives in
+     idx_var       - Alpine expression for this node's index in parent_array
+     depth         - integer; the renderer halts recursion at depth >= max_depth
+     max_depth     - integer (passed once from the form view's context)
+#}
+{% load web_extras %}
+
+<div class="schema-node" :class="`schema-node-${ {{ node }}.kind }`">
+  <div class="schema-node-header">
+    <span class="kind-badge" :class="`kind-${ {{ node }}.kind }`" x-text="{{ node }}.kind"></span>
+    <input class="node-name mono" placeholder="machine_name" x-model="{{ node }}.name" @input="markNameTouched({{ node }})">
+    <input class="node-label" placeholder="Display label" x-model="{{ node }}.label" @input="autoSlug({{ node }})">
+    <div class="schema-node-actions">
+      <button type="button" class="btn-mini" @click="moveUp({{ parent_array }}, {{ idx_var }})" :disabled="{{ idx_var }} === 0" title="Move up">↑</button>
+      <button type="button" class="btn-mini" @click="moveDown({{ parent_array }}, {{ idx_var }})" :disabled="{{ idx_var }} === {{ parent_array }}.length - 1" title="Move down">↓</button>
+      <button type="button" class="btn-mini btn-danger" @click="remove({{ parent_array }}, {{ idx_var }})" title="Remove">×</button>
+    </div>
+  </div>
+
+  <template x-if="{{ node }}.kind === 'field'">
+    <div class="schema-node-body">
+      {% include "web/_schema_field_config.html" with node=node %}
+    </div>
+  </template>
+
+  {% if depth < max_depth %}
+    {% with next_depth=depth|incr child_var="c"|suffix:depth idx_inner_var="i"|suffix:depth %}
+
+    <template x-if="{{ node }}.kind === 'object'">
+      <div class="schema-node-body">
+        <div class="schema-container-meta">
+          <label class="mono" style="display:flex;align-items:center;gap:0.6rem;">
+            <input type="checkbox" x-model="{{ node }}.required" style="width:auto;">
+            <span class="muted" x-text="{{ node }}.required ? 'object required' : 'object optional'"></span>
+          </label>
+        </div>
+        <div class="mono nested-heading">Fields</div>
+        <template x-for="({{ child_var }}, {{ idx_inner_var }}) in {{ node }}.fields" :key="{{ child_var }}.__id">
+          {% include "web/_schema_node.html" with node=child_var parent_array=node|add:".fields" idx_var=idx_inner_var depth=next_depth max_depth=max_depth %}
+        </template>
+        <div x-show="{{ node }}.fields.length === 0" class="muted small-empty">No fields yet.</div>
+        <div class="schema-toolbar">
+          <button type="button" class="btn-ghost btn-mini" @click="addChild({{ node }}, 'field', false)">+ Field</button>
+          <button type="button" class="btn-ghost btn-mini" @click="addChild({{ node }}, 'object', false)">+ Object</button>
+          <button type="button" class="btn-ghost btn-mini" @click="addChild({{ node }}, 'list', false)">+ List of objects</button>
+        </div>
+      </div>
+    </template>
+
+    <template x-if="{{ node }}.kind === 'list'">
+      <div class="schema-node-body">
+        <div class="schema-container-meta">
+          <label class="mono">Min rows</label>
+          <input type="number" min="0" max="999" x-model.number="{{ node }}.options.min_items" placeholder="0" style="max-width:90px;">
+          <span class="muted" x-text="(({{ node }}.options.min_items || 0) > 0) ? `at least ${ {{node}}.options.min_items } row(s) required` : 'rows optional'"></span>
+        </div>
+        <div class="mono nested-heading">Fields per row</div>
+        <template x-for="({{ child_var }}, {{ idx_inner_var }}) in {{ node }}.item.fields" :key="{{ child_var }}.__id">
+          {% include "web/_schema_node.html" with node=child_var parent_array=node|add:".item.fields" idx_var=idx_inner_var depth=next_depth max_depth=max_depth %}
+        </template>
+        <div x-show="{{ node }}.item.fields.length === 0" class="muted small-empty">No fields per row yet.</div>
+        <div class="schema-toolbar">
+          <button type="button" class="btn-ghost btn-mini" @click="addChild({{ node }}, 'field', true)">+ Field</button>
+          <button type="button" class="btn-ghost btn-mini" @click="addChild({{ node }}, 'object', true)">+ Object</button>
+          <button type="button" class="btn-ghost btn-mini" @click="addChild({{ node }}, 'list', true)">+ List of objects</button>
+        </div>
+      </div>
+    </template>
+
+    {% endwith %}
+  {% else %}
+    <template x-if="{{ node }}.kind !== 'field'">
+      <div class="schema-node-body muted small-empty">
+        Maximum nesting depth reached ({{ max_depth }} levels). Refactor at a higher level.
+      </div>
+    </template>
+  {% endif %}
+</div>

@@ -1,0 +1,151 @@
+{% extends "base.html" %}
+{% load web_extras %}
+{% block title %}{% if scanner %}Edit{% else %}New{% endif %} scanner · {{ account.name }}{% endblock %}
+{% block content %}
+<section class="hero">
+  <span class="mono">// Scanner</span>
+  <h1>{% if scanner %}Edit {{ scanner.name }}{% else %}New scanner{% endif %}</h1>
+</section>
+
+<div class="spacer"></div>
+
+<div class="card" style="max-width: 1100px;">
+<form method="post" x-data="schemaEditor()" x-init="init()" @submit="syncBeforeSubmit()">{% csrf_token %}
+  {% if form.non_field_errors %}<ul class="errorlist">{% for e in form.non_field_errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+
+  <div class="field">
+    <label>Name</label>{{ form.name }}{{ form.name.errors }}
+  </div>
+  <div class="field">
+    <label>Description</label>{{ form.description }}{{ form.description.errors }}
+  </div>
+  <div class="field">
+    <label>Priming prompt</label>{{ form.priming_prompt }}{{ form.priming_prompt.errors }}
+    <span class="muted">Free-form context shown to the LLM before extraction. e.g. "These are German invoices from utility companies."</span>
+  </div>
+
+  <div class="field">
+    <label>Field schema</label>
+    <input type="hidden" name="schema_json_text" :value="JSON.stringify({fields: tree})">
+    {{ form.schema_json_text.errors }}
+
+    <div class="schema-editor">
+      <div x-show="tree.length === 0" class="schema-empty">
+        <span class="muted">No fields yet. Use the buttons below to add some.</span>
+      </div>
+
+      <template x-for="(node, idx) in tree" :key="node.__id">
+        {% include "web/_schema_node.html" with node="node" parent_array="tree" idx_var="idx" depth=0 max_depth=editor_max_depth %}
+      </template>
+
+      <div class="schema-toolbar">
+        <button type="button" class="btn-ghost btn-mini" @click="addAtRoot('field')">+ Field</button>
+        <button type="button" class="btn-ghost btn-mini" @click="addAtRoot('object')">+ Object</button>
+        <button type="button" class="btn-ghost btn-mini" @click="addAtRoot('list')">+ List of objects</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="spacer"></div>
+  <button class="btn-primary" type="submit">{% if scanner %}Save{% else %}Create{% endif %}</button>
+  <a class="btn-ghost" href="{% url 'web:scanner_list' account_slug=account.slug %}">Cancel</a>
+</form>
+</div>
+
+{{ editor_data_types|json_script:"docer-data-types" }}
+{{ editor_initial_schema|json_script:"docer-initial-schema" }}
+
+<script>
+(function () {
+  const DATA_TYPES = JSON.parse(document.getElementById('docer-data-types').textContent);
+  const INITIAL_SCHEMA_RAW = JSON.parse(document.getElementById('docer-initial-schema').textContent);
+
+  let nextId = 1;
+  function nodeFactory(kind) {
+    if (kind === 'field') return { kind: 'field', name: '', label: '', data_type: 'string', required: false, description: '', options: {} };
+    if (kind === 'object') return { kind: 'object', name: '', label: '', required: false, fields: [] };
+    if (kind === 'list')  return { kind: 'list', name: '', label: '', options: { min_items: 0 }, item: { kind: 'object', fields: [] } };
+    throw new Error('unknown kind ' + kind);
+  }
+  function attachIds(node) {
+    Object.defineProperty(node, '__id', { value: nextId++, enumerable: false, writable: true, configurable: true });
+    Object.defineProperty(node, '__nameTouched', { value: !!(node.name && node.name.length), enumerable: false, writable: true, configurable: true });
+    if (!node.options) node.options = {};
+    if (node.kind === 'object') {
+      if (!Array.isArray(node.fields)) node.fields = [];
+      node.fields.forEach(attachIds);
+    } else if (node.kind === 'list') {
+      if (!node.item) node.item = { kind: 'object', fields: [] };
+      if (!Array.isArray(node.item.fields)) node.item.fields = [];
+      node.item.fields.forEach(attachIds);
+    }
+  }
+  function stripIds(arr) {
+    arr.forEach((n) => {
+      delete n.__id;
+      delete n.__nameTouched;
+      if (n.kind === 'object' && n.fields) stripIds(n.fields);
+      if (n.kind === 'list' && n.item && n.item.fields) stripIds(n.item.fields);
+    });
+  }
+  function slugifyLabel(s) {
+    return (s || '')
+      .toString()
+      .normalize('NFKD').replace(/[̀-ͯ]/g, '')
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '_')
+      .replace(/^_+|_+$/g, '')
+      .slice(0, 64);
+  }
+
+  window.schemaEditor = function () {
+    return {
+      tree: [],
+      dataTypes: DATA_TYPES,
+      init() {
+        const initial = (INITIAL_SCHEMA_RAW && Array.isArray(INITIAL_SCHEMA_RAW.fields))
+          ? JSON.parse(JSON.stringify(INITIAL_SCHEMA_RAW.fields))
+          : [];
+        initial.forEach(attachIds);
+        this.tree = initial;
+      },
+      addAtRoot(kind) {
+        const n = nodeFactory(kind);
+        attachIds(n);
+        this.tree.push(n);
+      },
+      addChild(parent, kind, isList) {
+        const target = isList ? parent.item.fields : parent.fields;
+        const n = nodeFactory(kind);
+        attachIds(n);
+        target.push(n);
+      },
+      onTypeChange(node) {
+        if ((node.data_type === 'enum' || node.data_type === 'open_enum') && !Array.isArray(node.options.values)) {
+          node.options.values = [];
+        }
+      },
+      addEnumValue(node) {
+        if (!Array.isArray(node.options.values)) node.options.values = [];
+        node.options.values.push({ id: '', label: '' });
+      },
+      moveUp(arr, i) { if (i > 0) arr.splice(i - 1, 0, arr.splice(i, 1)[0]); },
+      moveDown(arr, i) { if (i < arr.length - 1) arr.splice(i + 1, 0, arr.splice(i, 1)[0]); },
+      remove(arr, i) { arr.splice(i, 1); },
+      autoSlug(node) {
+        if (node.__nameTouched) return;
+        node.name = slugifyLabel(node.label);
+      },
+      markNameTouched(node) {
+        node.__nameTouched = true;
+      },
+      syncBeforeSubmit() {
+        // Hidden input :value binding picks up `tree` on submit; strip
+        // editor-local helper props defensively.
+        stripIds(this.tree);
+      },
+    };
+  };
+})();
+</script>
+{% endblock %}

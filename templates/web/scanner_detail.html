@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}{{ scanner.name }} · {{ account.name }}{% endblock %}
+{% block content %}
+<section class="hero">
+  <span class="mono">// {{ scanner.slug }}</span>
+  <h1>{{ scanner.name }}</h1>
+  {% if scanner.description %}<p class="muted">{{ scanner.description }}</p>{% endif %}
+  <p>
+    <a class="btn-primary" href="{% url 'web:scan_create' account_slug=account.slug scanner_slug=scanner.slug %}">New scan</a>
+    <a class="btn-ghost" href="{% url 'web:scanner_edit' account_slug=account.slug scanner_slug=scanner.slug %}">Edit</a>
+  </p>
+</section>
+
+<div class="spacer"></div>
+
+<div class="grid-2">
+  <div class="card">
+    <span class="mono">Schema</span>
+    <pre class="mono" style="overflow:auto;font-size:0.75rem;">{{ schema_pretty }}</pre>
+  </div>
+  <div class="card">
+    <span class="mono">Recent scans</span>
+    {% if recent_scans %}
+    <table class="data">
+      <thead><tr><th>When</th><th>File</th><th>Status</th></tr></thead>
+      <tbody>
+        {% for s in recent_scans %}
+        <tr>
+          <td><a href="{% url 'web:scan_detail' account_slug=account.slug scan_id=s.id %}">{{ s.created_at|date:"Y-m-d H:i" }}</a></td>
+          <td class="muted">{{ s.file.original_name }}</td>
+          <td><span class="pill {{ s.status }}">{{ s.status }}</span></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}<p class="muted">No scans yet.</p>{% endif %}
+  </div>
+</div>
+{% endblock %}

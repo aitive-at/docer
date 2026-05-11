@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}Sign up · {{ brand_name }}{% endblock %}
+{% block content %}
+<section class="hero">
+  <h1>Create your account</h1>
+  <p class="muted">Sign up and start scanning documents in minutes.</p>
+</section>
+<div class="spacer"></div>
+<div class="card" style="max-width: 480px; margin: 0 auto;">
+  <form method="post" novalidate>{% csrf_token %}
+    {% if form.non_field_errors %}<ul class="errorlist">{% for e in form.non_field_errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+    <div class="field">
+      <label for="id_email">Email <span class="required-mark">*</span></label>
+      {{ form.email }}
+      {% if form.email.errors %}<ul class="errorlist">{% for e in form.email.errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+    </div>
+    <div class="field">
+      <label for="id_display_name">Display name <span class="muted">(optional)</span></label>
+      {{ form.display_name }}
+      {% if form.display_name.errors %}<ul class="errorlist">{% for e in form.display_name.errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+    </div>
+    <div class="field">
+      <label for="id_password">Password <span class="required-mark">*</span></label>
+      {{ form.password }}
+      {% if form.password.errors %}<ul class="errorlist">{% for e in form.password.errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+      <span class="muted">At least 6 characters.</span>
+    </div>
+    <button class="btn-primary" type="submit">Create account</button>
+    <span class="muted" style="margin-left: 1rem;">Already have one? <a href="{% url 'auth:login' %}">Sign in</a></span>
+  </form>
+</div>
+{% endblock %}

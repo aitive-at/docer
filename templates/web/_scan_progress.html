@@ -1,0 +1,32 @@
+<div id="scan-progress"
+     {% if not scan.is_terminal %}
+     hx-get="{% url 'web:scan_progress' account_slug=account.slug scan_id=scan.id %}"
+     hx-trigger="load delay:1s"
+     hx-swap="outerHTML"
+     {% endif %}>
+  <div class="card">
+    <div class="row" style="align-items:center;">
+      <div class="col">
+        <span class="mono">Status</span>
+        <div class="status-line">
+          <span class="pill {{ scan.status }}">{{ scan.status }}</span>
+          <span class="status-message muted">{{ scan.progress_message }}</span>
+        </div>
+      </div>
+      <div class="col" style="max-width:240px;">
+        <span class="mono">Progress</span>
+        <div style="border:1px solid var(--border); border-radius:6px; height:8px; overflow:hidden; background: var(--bg);">
+          <div style="background: var(--accent); height: 100%; width: {{ scan.progress_pct }}%; transition: width 0.3s ease;"></div>
+        </div>
+        <div class="muted mono">{{ scan.progress_pct }}%</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% if scan.is_terminal %}
+{# Out-of-band swap: refresh the result panel now that the scan reached a terminal state. #}
+<div id="scan-result-panel" hx-swap-oob="outerHTML">
+  {% include "web/_scan_result_panel.html" %}
+</div>
+{% endif %}

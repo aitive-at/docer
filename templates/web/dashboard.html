@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}{{ account.name }} · Dashboard{% endblock %}
+{% block content %}
+<section class="hero">
+  <span class="mono">// Account</span>
+  <h1>{{ account.name }}</h1>
+  <p class="muted">{{ account.documents_scanned_total }} documents · {{ account.pages_scanned_total }} pages scanned to date.</p>
+</section>
+
+<div class="spacer"></div>
+
+<div class="grid-2">
+  <div class="card">
+    <span class="mono">Recent scans</span>
+    {% if recent_scans %}
+      <table class="data">
+        <thead><tr><th>When</th><th>Scanner</th><th>File</th><th>Status</th></tr></thead>
+        <tbody>
+          {% for s in recent_scans %}
+            <tr>
+              <td><a href="{% url 'web:scan_detail' account_slug=account.slug scan_id=s.id %}">{{ s.created_at|date:"Y-m-d H:i" }}</a></td>
+              <td>{{ s.scanner.name }}</td>
+              <td class="muted">{{ s.file.original_name }}</td>
+              <td><span class="pill {{ s.status }}">{{ s.status }}</span></td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <p class="muted">No scans yet.</p>
+    {% endif %}
+  </div>
+
+  <div class="card">
+    <span class="mono">Scanners</span>
+    {% if scanners %}
+      <table class="data">
+        <thead><tr><th>Name</th><th>Updated</th></tr></thead>
+        <tbody>
+          {% for sc in scanners %}
+            <tr>
+              <td><a href="{% url 'web:scanner_detail' account_slug=account.slug scanner_slug=sc.slug %}">{{ sc.name }}</a></td>
+              <td class="muted">{{ sc.updated_at|date:"Y-m-d" }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      <p><a class="btn-ghost" href="{% url 'web:scanner_list' account_slug=account.slug %}">All scanners</a></p>
+    {% else %}
+      <p class="muted">No scanners yet.</p>
+      <p><a class="btn-primary" href="{% url 'web:scanner_create' account_slug=account.slug %}">Create your first scanner</a></p>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

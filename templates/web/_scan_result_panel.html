@@ -1,0 +1,41 @@
+{# Result-panel content. Caller wraps in <div id="scan-result-panel">. Used by
+   scan_detail.html on first render, and OOB-swapped in by _scan_progress.html
+   when the scan reaches a terminal state. #}
+<div class="grid-2">
+  <div class="card">
+    <span class="mono">Extracted fields</span>
+    {% if field_results %}
+    <table class="data">
+      <thead><tr><th>Field</th><th>Type</th><th>Original</th><th>Canonical</th></tr></thead>
+      <tbody>
+      {% for fr in field_results %}
+        <tr>
+          <td class="mono">{{ fr.path }}</td>
+          <td class="muted">{{ fr.data_type }}</td>
+          <td>{{ fr.original_value|default:"—" }}</td>
+          <td>{% if fr.canonical_value %}<code class="mono">{{ fr.canonical_value }}</code>{% else %}<span class="muted">—</span>{% endif %}{% if fr.error %}<div class="error">{{ fr.error }}</div>{% endif %}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    {% else %}<p class="muted">No field results yet.</p>{% endif %}
+  </div>
+
+  <div class="card">
+    <span class="mono">Pages</span>
+    {% for page in pages %}
+      <div class="page-canvas">
+        <img src="{% url 'web:scan_page_image' account_slug=account.slug scan_id=scan.id index=page.index %}?overlay=1" alt="page {{ page.index|add:'1' }}">
+      </div>
+    {% empty %}
+      <p class="muted">Pages will appear here once preparing is done.</p>
+    {% endfor %}
+  </div>
+</div>
+
+{% if scan.error_message %}
+  <div class="card" style="margin-top:1rem; border-color: var(--error);">
+    <span class="mono">Errors</span>
+    <pre class="mono" style="white-space:pre-wrap;">{{ scan.error_message }}</pre>
+  </div>
+{% endif %}

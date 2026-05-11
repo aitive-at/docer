@@ -1,0 +1,54 @@
+{# Renders the per-field configuration block (type, required, hint, enum values, type-specific options). #}
+{# Caller passes one alias: `node` — the Alpine variable holding this field's reactive object. #}
+<div class="row">
+  <div class="col field">
+    <label>Type</label>
+    <select x-model="{{ node }}.data_type" @change="onTypeChange({{ node }})">
+      <template x-for="dt in dataTypes" :key="dt.key">
+        <option :value="dt.key" x-text="dt.label"></option>
+      </template>
+    </select>
+  </div>
+  <div class="col field" style="max-width: 180px;">
+    <label class="mono">Required</label>
+    <label style="display:flex;align-items:center;gap:0.6rem; padding-top:0.55rem;">
+      <input type="checkbox" x-model="{{ node }}.required" style="width:auto;">
+      <span class="muted" x-text="{{ node }}.required ? 'required' : 'optional'"></span>
+    </label>
+  </div>
+</div>
+
+<div class="field">
+  <label>Hint to the model</label>
+  <textarea rows="2" x-model="{{ node }}.description" placeholder="e.g. The invoice number printed on the document, often labeled 'Rechnungsnummer'."></textarea>
+</div>
+
+{# Enum values sub-editor #}
+<div x-show="{{ node }}.data_type === 'enum' || {{ node }}.data_type === 'open_enum'" class="enum-editor">
+  <label class="mono">Allowed values</label>
+  <p class="muted" x-show="{{ node }}.data_type === 'open_enum'">
+    Open enum: the model may propose a new id when none of these match.
+  </p>
+  <template x-for="(v, vi) in (({{ node }}.options.values) || [])" :key="vi">
+    <div class="enum-row">
+      <input class="mono" placeholder="id" x-model="v.id">
+      <input placeholder="label" x-model="v.label">
+      <button type="button" class="btn-mini btn-danger" @click="{{ node }}.options.values.splice(vi, 1)">×</button>
+    </div>
+  </template>
+  <button type="button" class="btn-ghost btn-mini" @click="addEnumValue({{ node }})">+ Add value</button>
+</div>
+
+{# Type-specific options (currency / phone / decimal) #}
+<div x-show="{{ node }}.data_type === 'currency_amount'" class="field">
+  <label>Default currency <span class="muted">(ISO-4217, optional)</span></label>
+  <input x-model="{{ node }}.options.default_currency" placeholder="EUR" maxlength="3" style="text-transform:uppercase; max-width:120px;">
+</div>
+<div x-show="{{ node }}.data_type === 'phone'" class="field">
+  <label>Default region <span class="muted">(ISO-3166 alpha-2, optional)</span></label>
+  <input x-model="{{ node }}.options.default_region" placeholder="DE" maxlength="2" style="text-transform:uppercase; max-width:100px;">
+</div>
+<div x-show="{{ node }}.data_type === 'decimal'" class="field">
+  <label>Decimal places</label>
+  <input type="number" min="0" max="10" x-model.number="{{ node }}.options.precision" placeholder="2" style="max-width:100px;">
+</div>
