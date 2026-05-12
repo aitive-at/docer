@@ -153,6 +153,15 @@ def _describe_field(node: dict) -> str:
     if data_type == "boolean":
         bits.append('Return literal text such as "yes"/"no", "ja"/"nein", "true"/"false".')
 
+    if data_type == "qr_code":
+        bits.append(
+            "Locate any QR code on the page, visually decode its payload, "
+            "and return the resulting text exactly as encoded — whether "
+            "it's a URL, a vCard, a payment URI (EPC QR / Swiss QR), or "
+            "plain text. Preserve newlines, query parameters, and case. "
+            "Return only the decoded content (no surrounding labels)."
+        )
+
     bits.append('Return "" (empty string) if the value is genuinely absent.')
     return " ".join(bits)
 

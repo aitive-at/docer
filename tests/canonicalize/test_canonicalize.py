@@ -12,8 +12,17 @@ def test_list_data_types_contains_core_types():
         "email", "phone", "iban", "vat_id",
         "int", "float", "decimal", "currency_amount", "quantity",
         "date", "datetime", "boolean", "enum", "open_enum",
+        "qr_code",
     ):
         assert k in keys
+
+
+def test_qr_code_preserves_payload_verbatim():
+    """QR payloads often have meaningful structure (newlines in vCards, query
+    strings in URLs). Canonicalization must not collapse them."""
+    r = canonicalize("qr_code", "BEGIN:VCARD\nVERSION:3.0\nFN:Alice\nEND:VCARD")
+    assert r.canonical == "BEGIN:VCARD\nVERSION:3.0\nFN:Alice\nEND:VCARD"
+    assert r.errors == []
 
 
 def test_unknown_type_returns_error():

@@ -58,20 +58,36 @@
     </div>
   </footer>
   <script>
-  // Scan-detail page interactivity: hover sync between bboxes and field rows,
-  // plus zoom controls per page. Event-delegated on document so htmx OOB
-  // swaps don't require re-wiring.
+  // Scan-detail page interactivity: bidirectional hover sync between bboxes
+  // and field-result rows, plus per-page zoom. Event-delegated on document so
+  // htmx OOB swaps don't require re-wiring after each polling response.
   (function () {
-    function highlightForId(id, on) {
+    function highlightForId(id, on, source) {
       if (!id) return;
-      document.querySelectorAll('[data-fr-id="' + id + '"]').forEach(function (el) {
-        el.classList.toggle('highlight', on);
-      });
+      var nodes = document.querySelectorAll('[data-fr-id="' + id + '"]');
+      nodes.forEach(function (el) { el.classList.toggle('highlight', on); });
+      if (!on || !source) return;
+      // When the user hovers a field row (in the left column), scroll the
+      // matching bbox into view inside its page-viewport so the visual
+      // feedback finds the user instead of waiting to be discovered.
+      if (source.classList && source.classList.contains('field-row')) {
+        nodes.forEach(function (el) {
+          if (!el.classList.contains('bbox')) return;
+          var viewport = el.closest('.page-viewport');
+          if (!viewport) return;
+          var bRect = el.getBoundingClientRect();
+          var vRect = viewport.getBoundingClientRect();
+          if (bRect.top < vRect.top || bRect.bottom > vRect.bottom ||
+              bRect.left < vRect.left || bRect.right > vRect.right) {
+            el.scrollIntoView({ block: 'center', inline: 'center', behavior: 'smooth' });
+          }
+        });
+      }
     }
     document.addEventListener('mouseover', function (e) {
       var t = e.target.closest('[data-fr-id]');
       if (!t) return;
-      highlightForId(t.dataset.frId, true);
+      highlightForId(t.dataset.frId, true, t);
     });
     document.addEventListener('mouseout', function (e) {
       var t = e.target.closest('[data-fr-id]');

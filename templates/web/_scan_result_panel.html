@@ -14,7 +14,14 @@ when the scan reaches a terminal state.
         <tr class="field-row" data-fr-id="{{ fr.id }}">
           <td class="mono">{{ fr.path }}</td>
           <td class="muted">{{ fr.data_type }}</td>
-          <td>{{ fr.original_value|default:"—" }}</td>
+          <td>
+            {% if fr.data_type == "qr_code" and fr.qr_data_url %}
+              <img class="qr-preview" src="{{ fr.qr_data_url }}" alt="QR code"
+                   title="{{ fr.original_value }}">
+            {% else %}
+              {{ fr.original_value|default:"—" }}
+            {% endif %}
+          </td>
           <td>{% if fr.canonical_value %}<code class="mono">{{ fr.canonical_value }}</code>{% else %}<span class="muted">—</span>{% endif %}{% if fr.error %}<div class="error">{{ fr.error }}</div>{% endif %}</td>
         </tr>
       {% endfor %}
@@ -39,7 +46,9 @@ when the scan reaches a terminal state.
             <img src="{% url 'web:scan_page_image' account_slug=account.slug scan_id=scan.id index=page.index %}" alt="page {{ page.index|add:'1' }}">
             {% for ov in page.bboxes %}
               <div class="bbox" data-fr-id="{{ ov.fr_id }}" title="{{ ov.path }}"
-                   style="left:{{ ov.left_pct }}%; top:{{ ov.top_pct }}%; width:{{ ov.width_pct }}%; height:{{ ov.height_pct }}%;"></div>
+                   style="left:{{ ov.left_pct }}%; top:{{ ov.top_pct }}%; width:{{ ov.width_pct }}%; height:{{ ov.height_pct }}%;">
+                <span class="bbox-label">{{ ov.path }}</span>
+              </div>
             {% endfor %}
           </div>
         </div>

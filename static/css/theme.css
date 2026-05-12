@@ -301,12 +301,42 @@ table.data th { font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; let
 }
 .page-canvas .bbox:hover,
 .page-canvas .bbox.highlight {
-  background: rgba(214, 75, 106, 0.25);
-  border-color: var(--accent-light);
-  box-shadow: 0 0 0 2px rgba(214, 75, 106, 0.35);
-  z-index: 5;
+  background: rgba(255, 220, 0, 0.35);
+  border-color: #ffcc00;
+  border-width: 3px;
+  box-shadow: 0 0 0 3px rgba(255, 204, 0, 0.55), 0 0 18px 4px rgba(255, 204, 0, 0.5);
+  z-index: 6;
+  animation: bbox-pulse 1.1s ease-in-out infinite;
 }
+@keyframes bbox-pulse {
+  0%, 100% { box-shadow: 0 0 0 3px rgba(255, 204, 0, 0.55), 0 0 18px 4px rgba(255, 204, 0, 0.50); }
+  50%      { box-shadow: 0 0 0 5px rgba(255, 204, 0, 0.75), 0 0 28px 8px rgba(255, 204, 0, 0.75); }
+}
+.page-canvas .bbox-label {
+  position: absolute;
+  top: -1.6em;
+  left: 0;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.7rem;
+  color: #1a1a1a;
+  background: #ffcc00;
+  padding: 0.1rem 0.4rem;
+  border-radius: 3px 3px 3px 0;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.12s ease;
+}
+.page-canvas .bbox.highlight .bbox-label,
+.page-canvas .bbox:hover .bbox-label { opacity: 1; }
+
 .field-row { transition: background 0.12s ease; }
 .field-row:hover,
-.field-row.highlight { background: var(--accent-dim); }
+.field-row.highlight {
+  background: rgba(255, 204, 0, 0.12);
+  outline: 2px solid #ffcc00;
+  outline-offset: -2px;
+}
 .field-row[data-fr-id] { cursor: pointer; }
+.qr-preview { display: block; width: 96px; height: 96px; background: #fff; padding: 4px; border-radius: 4px; cursor: help; transition: transform 0.15s ease; }
+.qr-preview:hover { transform: scale(1.6); transform-origin: center left; box-shadow: 0 4px 24px rgba(0,0,0,0.4); }

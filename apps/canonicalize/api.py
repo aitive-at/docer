@@ -14,6 +14,7 @@ from .types import (
     names,
     numbers,
     phone,
+    qr_code,
     quantity,
     strings,
     vat,
@@ -62,6 +63,7 @@ _REGISTRY: dict[str, tuple[Handler, str, dict]] = {
     "date": (dates.canon_date, "Date (YYYY-MM-DD)", {}),
     "datetime": (dates.canon_datetime, "Datetime (ISO-8601)", {}),
     "boolean": (booleans.canon_boolean, "Boolean", {}),
+    "qr_code": (qr_code.canon_qr_code, "QR code (decoded text)", {}),
     "enum": (
         enums.canon_enum,
         "Enum (closed)",

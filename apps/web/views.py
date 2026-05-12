@@ -15,6 +15,7 @@ from django.http import (
     HttpResponseRedirect,
 )
 from django.shortcuts import get_object_or_404, redirect, render
+from django.template.loader import render_to_string
 from django.urls import reverse
 from PIL import Image, ImageDraw
 
@@ -37,6 +38,28 @@ def _editor_context(scanner: Scanner | None) -> dict:
         "editor_initial_schema": initial_schema,
         "editor_max_depth": 6,
     }
+
+
+def _attach_qr_previews(field_results) -> None:
+    """For each qr_code field with a decoded value, attach a `.qr_data_url`
+    transient attribute holding an inline SVG data URI. Rendered as <img>
+    in the result panel so hover-to-show-text and copy-out both work.
+    """
+    import segno
+
+    for fr in field_results:
+        fr.qr_data_url = None
+        if fr.data_type != "qr_code":
+            continue
+        text = (fr.original_value or "").strip()
+        if not text:
+            continue
+        try:
+            qr = segno.make(text, error="m", micro=False)
+            fr.qr_data_url = qr.svg_data_uri(scale=4, border=2)
+        except Exception:
+            # segno can refuse e.g. extremely long payloads; degrade to text.
+            fr.qr_data_url = None
 
 
 def _attach_bbox_overlays(pages, field_results) -> None:
@@ -297,6 +320,7 @@ def scan_detail(request: HttpRequest, account_slug: str, scan_id: int) -> HttpRe
     field_results = list(scan.field_results.all())
     pages = list(scan.file.pages.all())
     _attach_bbox_overlays(pages, field_results)
+    _attach_qr_previews(field_results)
     return render(
         request,
         "web/scan_detail.html",
@@ -318,18 +342,30 @@ def scan_progress_fragment(request: HttpRequest, account_slug: str, scan_id: int
     scan = get_object_or_404(
         Scan.objects.select_related("scanner", "file"), account=account, pk=scan_id
     )
-    # polling=True makes _scan_progress.html include its hx-swap-oob result-
-    # panel block. Static includes (from scan_detail.html) must NOT pass this
-    # — otherwise the OOB markup leaks into the initial page and duplicates
-    # the result panel.
     ctx = {"account": account, "scan": scan, "polling": True}
-    if scan.is_terminal():
-        field_results = list(scan.field_results.all())
-        pages = list(scan.file.pages.all())
-        _attach_bbox_overlays(pages, field_results)
-        ctx["field_results"] = field_results
-        ctx["pages"] = pages
-    return render(request, "web/_scan_progress.html", ctx)
+    if not scan.is_terminal():
+        # Just the inner card — htmx swaps it into #scan-progress-card.
+        # The wrapping #scan-poller stays in place with its every-2s timer.
+        return render(request, "web/_scan_progress_card.html", ctx)
+
+    # Terminal: assemble the card plus an OOB result-panel swap, and respond
+    # with HTTP 286 so htmx stops polling (it still processes the body).
+    field_results = list(scan.field_results.all())
+    pages = list(scan.file.pages.all())
+    _attach_bbox_overlays(pages, field_results)
+    _attach_qr_previews(field_results)
+    ctx["field_results"] = field_results
+    ctx["pages"] = pages
+
+    card_html = render_to_string("web/_scan_progress_card.html", ctx, request=request)
+    panel_html = render_to_string("web/_scan_result_panel.html", ctx, request=request)
+    body = (
+        card_html
+        + '\n<div id="scan-result-panel" hx-swap-oob="outerHTML">\n'
+        + panel_html
+        + "\n</div>\n"
+    )
+    return HttpResponse(body, status=286, content_type="text/html; charset=utf-8")
 
 
 @login_required
