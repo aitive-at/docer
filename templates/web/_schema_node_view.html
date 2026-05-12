@@ -1,14 +1,15 @@
-{# Recursive read-only renderer for a Scanner.schema_json node.
+{% comment %}
+Recursive read-only renderer for a Scanner.schema_json node.
 
-   Caller passes:
-     node      - dict (the schema node)
-     depth     - integer recursion depth (start at 0)
-     max_depth - integer (matches the editor's limit so deep structures
-                 are flagged the same way visually)
+Caller passes:
+  node      - dict (the schema node)
+  depth     - integer recursion depth (start at 0)
+  max_depth - integer (matches the editor's limit so deep structures
+              are flagged the same way visually)
 
-   Mirrors the visual structure of templates/web/_schema_node.html but
-   without any Alpine bindings — pure server-rendered, no edit affordances.
-#}
+Mirrors the visual structure of templates/web/_schema_node.html but
+without any Alpine bindings — pure server-rendered, no edit affordances.
+{% endcomment %}
 <div class="schema-node schema-node-{{ node.kind|default:'field' }}">
   <div class="schema-node-header">
     <span class="kind-badge kind-{{ node.kind|default:'field' }}">{{ node.kind|default:'field' }}</span>

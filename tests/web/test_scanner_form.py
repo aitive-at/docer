@@ -115,3 +115,24 @@ def test_scanner_edit_round_trip_preserves_schema(client_user_account):
     # The schema is embedded as JSON in a json_script tag for Alpine to read.
     assert '"name": "a"' in body or '"name":"a"' in body
     assert 'id="docer-initial-schema"' in body
+
+
+def test_edit_page_has_no_leaked_template_comment_markers(client_user_account):
+    """Multi-line {# ... #} comments don't get stripped by Django and leak as
+    raw text into the page (regression: previously rendered the rationale
+    block above the field-type dropdown). Use {% comment %} for multi-line."""
+    c, _user, account = client_user_account
+    scanner = Scanner.objects.create(
+        account=account,
+        name="Comment guard",
+        slug="comment-guard",
+        schema_json={"fields": [{"kind": "field", "name": "a", "label": "A",
+                                 "data_type": "currency_amount", "required": False,
+                                 "description": "", "options": {}}]},
+    )
+    resp = c.get(
+        reverse("web:scanner_edit", kwargs={"account_slug": account.slug, "scanner_slug": scanner.slug})
+    )
+    body = resp.content.decode()
+    assert "{#" not in body
+    assert "#}" not in body

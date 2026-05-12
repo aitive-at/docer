@@ -1,12 +1,13 @@
-{# Recursive schema-node renderer.
+{% comment %}
+Recursive schema-node renderer.
 
-   Caller passes Alpine-expression aliases as Django template variables:
-     node          - Alpine expression for *this* node (e.g. "node", "c0", "c2")
-     parent_array  - Alpine expression for the array this node lives in
-     idx_var       - Alpine expression for this node's index in parent_array
-     depth         - integer; the renderer halts recursion at depth >= max_depth
-     max_depth     - integer (passed once from the form view's context)
-#}
+Caller passes Alpine-expression aliases as Django template variables:
+  node          - Alpine expression for *this* node (e.g. "node", "c0", "c2")
+  parent_array  - Alpine expression for the array this node lives in
+  idx_var       - Alpine expression for this node's index in parent_array
+  depth         - integer; the renderer halts recursion at depth >= max_depth
+  max_depth     - integer (passed once from the form view's context)
+{% endcomment %}
 {% load web_extras %}
 
 <div class="schema-node" :class="`schema-node-${ {{ node }}.kind }`">

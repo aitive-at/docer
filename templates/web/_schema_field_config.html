@@ -3,10 +3,12 @@
 <div class="row">
   <div class="col field">
     <label>Type</label>
-    {# Options are server-rendered so they exist before Alpine's x-model
-       reads node.data_type — otherwise the browser silently rejects the
-       initial value (no matching <option> yet) and the dropdown defaults
-       to "string" for previously-saved fields. #}
+    {% comment %}
+      Options are server-rendered so they exist before Alpine's x-model
+      reads node.data_type. Otherwise the browser silently rejects the
+      initial value (no matching <option> yet) and the dropdown defaults
+      to "string" for previously-saved fields.
+    {% endcomment %}
     <select x-model="{{ node }}.data_type" @change="onTypeChange({{ node }})">
       {% for dt in editor_data_types %}
         <option value="{{ dt.key }}">{{ dt.label }}</option>
