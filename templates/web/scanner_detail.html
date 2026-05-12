@@ -23,9 +23,14 @@
 <div class="spacer"></div>
 
 <div class="grid-2">
-  <div class="card">
-    <span class="mono">Schema</span>
-    <div class="schema-editor schema-readonly">
+  <div class="card" x-data="{ rawOpen: false, copyLabel: 'Copy' }">
+    <div class="card-header-row">
+      <span class="mono">Schema</span>
+      <div class="card-header-actions">
+        <button type="button" class="btn-mini" @click="rawOpen = !rawOpen" x-text="rawOpen ? 'Hide JSON' : 'Show JSON'">Show JSON</button>
+      </div>
+    </div>
+    <div class="schema-editor schema-readonly" x-show="!rawOpen">
       {% if schema_fields %}
         {% for node in schema_fields %}
           {% include "web/_schema_node_view.html" with node=node depth=0 max_depth=6 %}
@@ -33,6 +38,14 @@
       {% else %}
         <div class="schema-empty"><span class="muted">No fields defined yet. <a href="{% url 'web:scanner_edit' account_slug=account.slug scanner_slug=scanner.slug %}">Edit the scanner</a> to add some.</span></div>
       {% endif %}
+    </div>
+    <div class="raw-json-block" x-show="rawOpen" x-cloak>
+      <div class="raw-json-actions">
+        <button type="button" class="btn-mini"
+                @click="navigator.clipboard.writeText($refs.rawJsonText.textContent).then(() => { copyLabel = 'Copied!'; setTimeout(() => copyLabel = 'Copy', 1500); })"
+                x-text="copyLabel">Copy</button>
+      </div>
+      <pre class="mono raw-json" x-ref="rawJsonText">{{ schema_pretty }}</pre>
     </div>
   </div>
   <div class="card">

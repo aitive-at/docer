@@ -102,10 +102,26 @@ def test_signup_seeds_invoice_template_scanner():
     assert len(scanners) == 1, scanners
     scanner = scanners[0]
     assert scanner.name == "Invoice"
-    field_names = {f["name"] for f in scanner.schema_json["fields"]}
-    assert field_names == {"invoice_number", "gross_amount"}
-    gross = next(f for f in scanner.schema_json["fields"] if f["name"] == "gross_amount")
-    assert gross["data_type"] == "currency_amount"
-    assert gross["required"] is True
+    fields_by_name = {f["name"]: f for f in scanner.schema_json["fields"]}
+    assert set(fields_by_name) == {
+        "invoice_number",
+        "gross_amount",
+        "contact_phone",
+        "iban",
+        "due_date",
+        "created_date",
+        "vat_id",
+    }
+    # Required fields
+    assert fields_by_name["invoice_number"]["required"] is True
+    assert fields_by_name["gross_amount"]["required"] is True
+    assert fields_by_name["contact_phone"]["required"] is True
+    # Optional fields
+    assert fields_by_name["iban"]["required"] is False
+    assert fields_by_name["due_date"]["required"] is False
+    # Data type assignment
+    assert fields_by_name["gross_amount"]["data_type"] == "currency_amount"
+    assert fields_by_name["iban"]["data_type"] == "iban"
+    assert fields_by_name["vat_id"]["data_type"] == "vat_id"
     # Multilingual: blank language_hint lets the LLM detect language from the doc.
     assert scanner.language_hint == ""

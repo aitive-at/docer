@@ -9,6 +9,7 @@ urlpatterns = [
     path("<slug:account_slug>/", views.dashboard, name="dashboard"),
     path("<slug:account_slug>/scanners/", views.scanner_list, name="scanner_list"),
     path("<slug:account_slug>/scanners/new", views.scanner_create, name="scanner_create"),
+    path("<slug:account_slug>/scanners/new-from-json", views.scanner_create_from_json, name="scanner_create_from_json"),
     path("<slug:account_slug>/scanners/<slug:scanner_slug>/", views.scanner_detail, name="scanner_detail"),
     path("<slug:account_slug>/scanners/<slug:scanner_slug>/edit", views.scanner_edit, name="scanner_edit"),
     path("<slug:account_slug>/scanners/<slug:scanner_slug>/copy", views.scanner_copy, name="scanner_copy"),

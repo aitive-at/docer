@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}New scanner from JSON · {{ account.name }}{% endblock %}
+{% block content %}
+<section class="hero">
+  <span class="mono">// Scanner</span>
+  <h1>New scanner from JSON</h1>
+  <p class="muted">Paste a schema JSON object with a top-level <code class="mono">fields</code> list. For a visual editor instead, use <a href="{% url 'web:scanner_create' account_slug=account.slug %}">New scanner</a>.</p>
+</section>
+
+<div class="spacer"></div>
+
+<div class="card" style="max-width: 1000px;">
+<form method="post">{% csrf_token %}
+  {% if form.non_field_errors %}<ul class="errorlist">{% for e in form.non_field_errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+
+  <div class="field">
+    <label>Name</label>{{ form.name }}{{ form.name.errors }}
+  </div>
+  <div class="field">
+    <label>Description</label>{{ form.description }}{{ form.description.errors }}
+  </div>
+  <div class="field">
+    <label>Priming prompt</label>{{ form.priming_prompt }}{{ form.priming_prompt.errors }}
+  </div>
+
+  <div class="field">
+    <label>Field schema (JSON)</label>
+    {{ form.schema_json_text }}
+    {{ form.schema_json_text.errors }}
+    <span class="muted">Expected shape: <code class="mono">{"fields": [{"kind": "field", "name": "...", "label": "...", "data_type": "...", "required": true, "description": "...", "options": {}}, ...]}</code></span>
+  </div>
+
+  <div class="spacer"></div>
+  <button class="btn-primary" type="submit">Create</button>
+  <a class="btn-ghost" href="{% url 'web:scanner_list' account_slug=account.slug %}">Cancel</a>
+</form>
+</div>
+{% endblock %}

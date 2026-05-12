@@ -278,13 +278,35 @@ table.data th { font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; let
 .small-meta { margin-top: 0.4rem; font-size: 0.78rem; }
 .scanner-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center; }
 .scanner-actions form { margin: 0; }
+.card-header-row { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; margin-bottom: 0.5rem; }
+.card-header-actions { display: flex; gap: 0.4rem; }
+.raw-json-block { margin-top: 0.4rem; }
+.raw-json-actions { display: flex; justify-content: flex-end; margin-bottom: 0.4rem; }
+.raw-json { background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 0.8rem; max-height: 520px; overflow: auto; font-size: 0.78rem; white-space: pre; }
+[x-cloak] { display: none !important; }
 
-/* Field overlay */
-.page-canvas { position: relative; display: inline-block; max-width: 100%; }
-.page-canvas img { max-width: 100%; display: block; border-radius: var(--radius-sm); }
+/* Field overlay + interactive page viewer */
+.page-section { margin: 0.8rem 0 1.4rem 0; }
+.page-controls { display: flex; gap: 0.4rem; align-items: center; margin-bottom: 0.4rem; }
+.page-controls .zoom-level { min-width: 3.2em; text-align: center; font-size: 0.78rem; color: var(--muted); }
+.page-viewport { position: relative; max-height: 720px; overflow: auto; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--bg); }
+.page-canvas { position: relative; display: inline-block; transform-origin: top left; transition: transform 0.15s ease; }
+.page-canvas img { display: block; max-width: 100%; }
 .page-canvas .bbox {
   position: absolute;
   border: 2px solid var(--accent);
   background: rgba(214, 75, 106, 0.08);
-  pointer-events: none;
+  cursor: pointer;
+  transition: background 0.12s ease, border-color 0.12s ease, box-shadow 0.12s ease;
 }
+.page-canvas .bbox:hover,
+.page-canvas .bbox.highlight {
+  background: rgba(214, 75, 106, 0.25);
+  border-color: var(--accent-light);
+  box-shadow: 0 0 0 2px rgba(214, 75, 106, 0.35);
+  z-index: 5;
+}
+.field-row { transition: background 0.12s ease; }
+.field-row:hover,
+.field-row.highlight { background: var(--accent-dim); }
+.field-row[data-fr-id] { cursor: pointer; }

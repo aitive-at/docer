@@ -5,7 +5,10 @@
   <span class="mono">// Scanners</span>
   <h1>Document scanners</h1>
   <p class="muted">Each scanner is configured for one document type with its own field schema.</p>
-  <p><a class="btn-primary" href="{% url 'web:scanner_create' account_slug=account.slug %}">New scanner</a></p>
+  <p>
+    <a class="btn-primary" href="{% url 'web:scanner_create' account_slug=account.slug %}">New scanner</a>
+    <a class="btn-ghost" href="{% url 'web:scanner_create_from_json' account_slug=account.slug %}">From JSON</a>
+  </p>
 </section>
 
 <div class="spacer"></div>

@@ -106,3 +106,59 @@ def test_scanner_delete_requires_post(client_user_account):
     # GET must NOT delete.
     assert resp.status_code in (302, 303)
     assert Scanner.objects.filter(pk=src.pk).exists()
+
+
+def test_scanner_detail_shows_raw_json_pre_block(client_user_account):
+    """The Raw-JSON toggle should embed the schema as pretty-printed JSON in a
+    <pre> for copy-out, alongside the hierarchical viewer."""
+    c, _user, account = client_user_account
+    scanner = Scanner.objects.get(account=account, slug="invoice")
+    resp = c.get(
+        reverse("web:scanner_detail", kwargs={"account_slug": account.slug, "scanner_slug": scanner.slug})
+    )
+    body = resp.content.decode()
+    # The raw-JSON section uses our specific pre class for styling.
+    assert 'class="mono raw-json"' in body
+    # Django auto-escapes the JSON output inside the <pre>: '"' → '&quot;'.
+    # Check for the escaped form of a top-level key.
+    assert "&quot;fields&quot;:" in body
+    # Plain ASCII identifiers appear as-is inside the escaped JSON.
+    assert "invoice_number" in body
+    assert "currency_amount" in body
+
+
+def test_scanner_create_from_json(client_user_account):
+    """POSTing a valid raw JSON schema to scanner_create_from_json must save
+    the scanner exactly as posted (no editor round-trip in between)."""
+    import json as _json
+
+    c, _user, account = client_user_account
+    schema = {
+        "fields": [
+            {"kind": "field", "name": "po_number", "label": "PO Number",
+             "data_type": "string", "required": True, "description": "", "options": {}},
+        ]
+    }
+    resp = c.post(
+        reverse("web:scanner_create_from_json", kwargs={"account_slug": account.slug}),
+        data={
+            "name": "PO scanner",
+            "description": "",
+            "priming_prompt": "",
+            "schema_json_text": _json.dumps(schema),
+        },
+    )
+    assert resp.status_code in (302, 303), resp.content[:500]
+    saved = Scanner.objects.get(account=account, name="PO scanner")
+    assert saved.schema_json["fields"][0]["name"] == "po_number"
+
+
+def test_scanner_create_from_json_rejects_malformed(client_user_account):
+    c, _user, account = client_user_account
+    resp = c.post(
+        reverse("web:scanner_create_from_json", kwargs={"account_slug": account.slug}),
+        data={"name": "Bad", "schema_json_text": "{not valid json"},
+    )
+    assert resp.status_code == 200
+    assert b"Schema JSON parse error" in resp.content
+    assert not Scanner.objects.filter(account=account, name="Bad").exists()

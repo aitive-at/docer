@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import io
+import json
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
@@ -36,6 +37,34 @@ def _editor_context(scanner: Scanner | None) -> dict:
         "editor_initial_schema": initial_schema,
         "editor_max_depth": 6,
     }
+
+
+def _attach_bbox_overlays(pages, field_results) -> None:
+    """For each page, attach a `.bboxes` list of ready-to-render overlay dicts.
+
+    Each overlay carries percentage strings for CSS positioning plus an fr_id
+    that the frontend uses to sync hover state with the field-results table.
+    Bboxes with absolute pixel coordinates (>1.0) are skipped — we don't know
+    the rendered image size on the server, so legacy data would render wrong.
+    """
+    by_page: dict[int, list[dict]] = {}
+    for fr in field_results:
+        bb = fr.bbox
+        if not bb or fr.page_index is None or len(bb) != 4:
+            continue
+        x0, y0, x1, y1 = bb
+        if max(abs(x0), abs(y0), abs(x1), abs(y1)) > 1.0:
+            continue
+        by_page.setdefault(fr.page_index, []).append({
+            "fr_id": fr.id,
+            "path": fr.path,
+            "left_pct": f"{x0 * 100:.2f}",
+            "top_pct": f"{y0 * 100:.2f}",
+            "width_pct": f"{(x1 - x0) * 100:.2f}",
+            "height_pct": f"{(y1 - y0) * 100:.2f}",
+        })
+    for p in pages:
+        p.bboxes = by_page.get(p.index, [])
 
 
 def _require_member(request: HttpRequest) -> HttpResponse | None:
@@ -118,6 +147,34 @@ def scanner_create(request: HttpRequest, account_slug: str) -> HttpResponse:
 
 
 @login_required
+def scanner_create_from_json(request: HttpRequest, account_slug: str) -> HttpResponse:
+    """Alternative create flow: paste a raw JSON schema instead of using the
+    visual editor. Uses the same ScannerForm; the JSON validation in
+    ScannerForm.clean_schema_json_text handles the parse + shape check."""
+    deny = _require_member(request)
+    if deny:
+        return deny
+    account = request.account
+    if request.method == "POST":
+        form = ScannerForm(request.POST)
+        if form.is_valid():
+            scanner = form.save(commit=False)
+            scanner.account = account
+            scanner.schema_json = form.cleaned_data["schema_json_text"]
+            scanner.slug = scanner.make_unique_slug(scanner.name)
+            scanner.save()
+            messages.success(request, "Scanner created from JSON.")
+            return redirect("web:scanner_detail", account_slug=account.slug, scanner_slug=scanner.slug)
+    else:
+        form = ScannerForm()
+    return render(
+        request,
+        "web/scanner_form_json.html",
+        {"account": account, "form": form, "scanner": None},
+    )
+
+
+@login_required
 def scanner_edit(request: HttpRequest, account_slug: str, scanner_slug: str) -> HttpResponse:
     deny = _require_member(request)
     if deny:
@@ -156,6 +213,7 @@ def scanner_detail(request: HttpRequest, account_slug: str, scanner_slug: str) -
             "account": account,
             "scanner": scanner,
             "schema_fields": (scanner.schema_json or {}).get("fields", []),
+            "schema_pretty": json.dumps(scanner.schema_json or {}, indent=2, ensure_ascii=False),
             "recent_scans": recent,
             "scan_count": scanner.scans.count(),
         },
@@ -238,6 +296,7 @@ def scan_detail(request: HttpRequest, account_slug: str, scan_id: int) -> HttpRe
     )
     field_results = list(scan.field_results.all())
     pages = list(scan.file.pages.all())
+    _attach_bbox_overlays(pages, field_results)
     return render(
         request,
         "web/scan_detail.html",
@@ -262,8 +321,11 @@ def scan_progress_fragment(request: HttpRequest, account_slug: str, scan_id: int
     ctx = {"account": account, "scan": scan}
     # When terminal, also feed the OOB result-panel partial.
     if scan.is_terminal():
-        ctx["field_results"] = list(scan.field_results.all())
-        ctx["pages"] = list(scan.file.pages.all())
+        field_results = list(scan.field_results.all())
+        pages = list(scan.file.pages.all())
+        _attach_bbox_overlays(pages, field_results)
+        ctx["field_results"] = field_results
+        ctx["pages"] = pages
     return render(request, "web/_scan_progress.html", ctx)
 
 

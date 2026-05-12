@@ -57,5 +57,47 @@
       <p class="footer-legal mono">© {% now "Y" %} aitiveData · Data · AI · IT Solutions · All rights reserved</p>
     </div>
   </footer>
+  <script>
+  // Scan-detail page interactivity: hover sync between bboxes and field rows,
+  // plus zoom controls per page. Event-delegated on document so htmx OOB
+  // swaps don't require re-wiring.
+  (function () {
+    function highlightForId(id, on) {
+      if (!id) return;
+      document.querySelectorAll('[data-fr-id="' + id + '"]').forEach(function (el) {
+        el.classList.toggle('highlight', on);
+      });
+    }
+    document.addEventListener('mouseover', function (e) {
+      var t = e.target.closest('[data-fr-id]');
+      if (!t) return;
+      highlightForId(t.dataset.frId, true);
+    });
+    document.addEventListener('mouseout', function (e) {
+      var t = e.target.closest('[data-fr-id]');
+      if (!t) return;
+      var to = e.relatedTarget && e.relatedTarget.closest && e.relatedTarget.closest('[data-fr-id="' + t.dataset.frId + '"]');
+      if (to) return;
+      highlightForId(t.dataset.frId, false);
+    });
+
+    document.addEventListener('click', function (e) {
+      var btn = e.target.closest('[data-zoom]');
+      if (!btn) return;
+      var section = btn.closest('.page-section');
+      if (!section) return;
+      var canvas = section.querySelector('.page-canvas');
+      var level = section.querySelector('.zoom-level');
+      var scale = parseFloat(section.dataset.scale || '1');
+      var action = btn.dataset.zoom;
+      if (action === '+') scale = Math.min(3, scale + 0.25);
+      else if (action === '-') scale = Math.max(0.5, scale - 0.25);
+      else if (action === 'reset') scale = 1;
+      section.dataset.scale = scale;
+      canvas.style.transform = 'scale(' + scale + ')';
+      level.textContent = Math.round(scale * 100) + '%';
+    });
+  })();
+  </script>
 </body>
 </html>

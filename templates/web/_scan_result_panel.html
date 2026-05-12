@@ -11,7 +11,7 @@ when the scan reaches a terminal state.
       <thead><tr><th>Field</th><th>Type</th><th>Original</th><th>Canonical</th></tr></thead>
       <tbody>
       {% for fr in field_results %}
-        <tr>
+        <tr class="field-row" data-fr-id="{{ fr.id }}">
           <td class="mono">{{ fr.path }}</td>
           <td class="muted">{{ fr.data_type }}</td>
           <td>{{ fr.original_value|default:"—" }}</td>
@@ -26,8 +26,23 @@ when the scan reaches a terminal state.
   <div class="card">
     <span class="mono">Pages</span>
     {% for page in pages %}
-      <div class="page-canvas">
-        <img src="{% url 'web:scan_page_image' account_slug=account.slug scan_id=scan.id index=page.index %}?overlay=1" alt="page {{ page.index|add:'1' }}">
+      <div class="page-section" data-scale="1">
+        <div class="page-controls">
+          <button type="button" class="btn-mini" data-zoom="-">−</button>
+          <span class="zoom-level mono">100%</span>
+          <button type="button" class="btn-mini" data-zoom="+">+</button>
+          <button type="button" class="btn-mini" data-zoom="reset">1:1</button>
+          <span class="muted mono">page {{ page.index|add:'1' }}</span>
+        </div>
+        <div class="page-viewport">
+          <div class="page-canvas">
+            <img src="{% url 'web:scan_page_image' account_slug=account.slug scan_id=scan.id index=page.index %}" alt="page {{ page.index|add:'1' }}">
+            {% for ov in page.bboxes %}
+              <div class="bbox" data-fr-id="{{ ov.fr_id }}" title="{{ ov.path }}"
+                   style="left:{{ ov.left_pct }}%; top:{{ ov.top_pct }}%; width:{{ ov.width_pct }}%; height:{{ ov.height_pct }}%;"></div>
+            {% endfor %}
+          </div>
+        </div>
       </div>
     {% empty %}
       <p class="muted">Pages will appear here once preparing is done.</p>

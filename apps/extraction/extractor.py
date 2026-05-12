@@ -364,7 +364,18 @@ def _run_locate_pass(client: OllamaClient, model: str, scan: Scan, page_b64: lis
     if not field_results or not page_b64:
         return
 
-    for fr in field_results:
+    # Progress slice 70%→95% gets divided across the per-field work so the bar
+    # actually moves during the slow locate pass (especially noticeable with
+    # cloud-hosted models where each call is 5-20s).
+    total = len(field_results)
+    for i, fr in enumerate(field_results):
+        pct = 70 + int(25 * (i / total)) if total else 70
+        _set_status(
+            scan,
+            Scan.LOCATING,
+            pct=pct,
+            message=f"locating field {i + 1}/{total}: {fr.path}",
+        )
         sys_prompt, user_prompt = build_locator_prompt(
             field_path=fr.path,
             field_label=fr.path.split(".")[-1],

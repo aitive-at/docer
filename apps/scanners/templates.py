@@ -20,17 +20,16 @@ if TYPE_CHECKING:
 INVOICE_TEMPLATE: dict = {
     "name": "Invoice",
     "description": (
-        "Extract the invoice number and gross total amount from invoices in "
-        "any language."
+        "Extract core invoice fields (number, gross amount, dates, sender "
+        "contact and tax info) from invoices in any language."
     ),
     "priming_prompt": (
         "You are analyzing an invoice document. Invoices may be in any "
         "language (German, English, French, Italian, Spanish, Dutch, etc.) "
-        "and from any country. Your job is to identify the invoice number "
-        "(the document's own identifier) and the gross total amount due "
-        "(including any VAT / sales tax). The amount and its currency may "
-        "appear in different places on the page - inspect headers, totals "
-        "rows, footers, and any 'amount due' boxes to find both."
+        "and from any country. Your job is to identify the invoice number, "
+        "gross total, payment metadata (IBAN, due date) and sender contact "
+        "/ tax identifiers. Fields you cannot find with high confidence may "
+        "be left blank when marked optional."
     ),
     "language_hint": "",
     "schema_json": {
@@ -74,6 +73,61 @@ INVOICE_TEMPLATE: dict = {
                     "'Totale lordo', 'Totaal', 'Te betalen'. If both a "
                     "net and a gross total are shown, return the GROSS "
                     "(VAT-inclusive) figure."
+                ),
+                "options": {},
+            },
+            {
+                "kind": "field",
+                "name": "contact_phone",
+                "label": "Contact Phone",
+                "data_type": "phone",
+                "required": True,
+                "description": (
+                    "The phone number the sender of the invoice provided."
+                ),
+                "options": {},
+            },
+            {
+                "kind": "field",
+                "name": "iban",
+                "label": "IBAN",
+                "data_type": "iban",
+                "required": False,
+                "description": (
+                    "The IBAN to send invoice payment to."
+                ),
+                "options": {},
+            },
+            {
+                "kind": "field",
+                "name": "due_date",
+                "label": "Due Date",
+                "data_type": "date",
+                "required": False,
+                "description": (
+                    "The date the invoice is due at."
+                ),
+                "options": {},
+            },
+            {
+                "kind": "field",
+                "name": "created_date",
+                "label": "Created Date",
+                "data_type": "date",
+                "required": False,
+                "description": (
+                    "The date the invoice was created at."
+                ),
+                "options": {},
+            },
+            {
+                "kind": "field",
+                "name": "vat_id",
+                "label": "Uid",
+                "data_type": "vat_id",
+                "required": False,
+                "description": (
+                    "The UID / VAT id of the sender."
                 ),
                 "options": {},
             },
