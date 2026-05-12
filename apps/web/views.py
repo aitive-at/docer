@@ -318,8 +318,11 @@ def scan_progress_fragment(request: HttpRequest, account_slug: str, scan_id: int
     scan = get_object_or_404(
         Scan.objects.select_related("scanner", "file"), account=account, pk=scan_id
     )
-    ctx = {"account": account, "scan": scan}
-    # When terminal, also feed the OOB result-panel partial.
+    # polling=True makes _scan_progress.html include its hx-swap-oob result-
+    # panel block. Static includes (from scan_detail.html) must NOT pass this
+    # — otherwise the OOB markup leaks into the initial page and duplicates
+    # the result panel.
+    ctx = {"account": account, "scan": scan, "polling": True}
     if scan.is_terminal():
         field_results = list(scan.field_results.all())
         pages = list(scan.file.pages.all())

@@ -24,8 +24,11 @@
   </div>
 </div>
 
-{% if scan.is_terminal %}
-{# Out-of-band swap: refresh the result panel now that the scan reached a terminal state. #}
+{% if polling and scan.is_terminal %}
+{# Out-of-band swap: refresh the result panel now that the scan reached a terminal state.
+   Gated on `polling` so the block ONLY appears in htmx response context — not on
+   static includes from scan_detail.html, where it would render a duplicate
+   #scan-result-panel inline above the real one. #}
 <div id="scan-result-panel" hx-swap-oob="outerHTML">
   {% include "web/_scan_result_panel.html" %}
 </div>
