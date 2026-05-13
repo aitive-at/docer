@@ -22,6 +22,7 @@ dependencies = [
     "whitenoise[brotli]>=6.7",
     "segno>=1.6",
     "opencv-python-headless>=4.10",
+    "dateparser>=1.2",
 ]
 
 [dependency-groups]

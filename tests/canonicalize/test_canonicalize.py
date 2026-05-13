@@ -298,11 +298,23 @@ def test_quantity(raw, language, value, unit):
         ("01/15/2024", "en", "2024-01-15"),
         ("15/01/2024", "fr", "2024-01-15"),
         ("Jan 15, 2024", "en", "2024-01-15"),
+        # Multilingual month names (the original bug-report case + others).
+        ("8. Mai 2026", "de", "2026-05-08"),
+        ("8. Mai 2026", None, "2026-05-08"),  # auto-detect German
+        ("15. März 2024", "de", "2024-03-15"),
+        ("1er janvier 2024", "fr", "2024-01-01"),
+        ("8 de mayo de 2026", "es", "2026-05-08"),
+        ("15 marzo 2024", "it", "2024-03-15"),
+        # Ordinal English
+        ("January 1st, 2024", None, "2024-01-01"),
+        # Ambiguous numeric — language hint disambiguates DMY vs MDY.
+        ("03/04/2024", "de", "2024-04-03"),
+        ("03/04/2024", "en", "2024-03-04"),
     ],
 )
 def test_date(raw, language, expected):
     r = canonicalize("date", raw, language=language)
-    assert r.canonical == expected
+    assert r.canonical == expected, f"input={raw!r} lang={language!r}"
     assert r.errors == []
 
 
