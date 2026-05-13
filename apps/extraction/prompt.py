@@ -155,11 +155,13 @@ def _describe_field(node: dict) -> str:
 
     if data_type == "qr_code":
         bits.append(
-            "Locate any QR code on the page, visually decode its payload, "
-            "and return the resulting text exactly as encoded — whether "
-            "it's a URL, a vCard, a payment URI (EPC QR / Swiss QR), or "
-            "plain text. Preserve newlines, query parameters, and case. "
-            "Return only the decoded content (no surrounding labels)."
+            "Return the literal string 'QR_PRESENT' if a QR code matching "
+            "this field's description is visible anywhere on the page, "
+            "otherwise return ''. Do NOT attempt to decode the QR's pixels "
+            "yourself — the actual contents will be decoded automatically "
+            "by a downstream pass using a purpose-built QR library. Your "
+            "job is only to confirm presence here; the locator pass will "
+            "ask you for the QR's bounding box separately."
         )
 
     bits.append('Return "" (empty string) if the value is genuinely absent.')

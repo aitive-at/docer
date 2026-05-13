@@ -21,6 +21,7 @@ dependencies = [
     "gunicorn>=26.0.0",
     "whitenoise[brotli]>=6.7",
     "segno>=1.6",
+    "opencv-python-headless>=4.10",
 ]
 
 [dependency-groups]

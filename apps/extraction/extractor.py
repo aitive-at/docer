@@ -183,6 +183,16 @@ def run_extraction(scan: Scan) -> None:
     except Exception as exc:
         logger.warning("locate pass errored for scan %s: %r", scan.id, exc)
 
+    # Post-locate decoders refine specific field types using pixel-level
+    # local decoding (e.g. cv2.QRCodeDetector for qr_code). The LLM is good
+    # at finding things; not so good at decoding codec'd content like QR
+    # bytes — so we delegate to purpose-built libraries once we know the
+    # region. See apps/extraction/decoders.py.
+    try:
+        _run_post_locate_decoders(scan, pages)
+    except Exception as exc:
+        logger.warning("post-locate decode errored for scan %s: %r", scan.id, exc)
+
     failure_reasons = _compute_failure_reasons(
         scan=scan,
         scanner_schema=scan.scanner.schema_json,
@@ -410,3 +420,65 @@ def _run_locate_pass(client: OllamaClient, model: str, scan: Scan, page_b64: lis
             fr.bbox = best_bbox
             fr.page_index = best_page
             fr.save(update_fields=["bbox", "page_index"])
+
+
+def _run_post_locate_decoders(scan: Scan, pages) -> None:
+    """For field results whose data_type has a registered post-locate decoder
+    (e.g. qr_code), crop the page image at the located bbox and run the
+    decoder. Overwrite original_value with the decoded text and re-canonicalize.
+
+    Decoders work on raw page PNG bytes — they have no Ollama dependency
+    and run synchronously in this process. See apps/extraction/decoders.py.
+    """
+    from .decoders import get_decoder
+
+    pages_by_idx = {p.index: p for p in pages}
+    field_results = list(
+        scan.field_results.exclude(data_type="").only(
+            "id", "path", "data_type", "original_value", "bbox", "page_index", "error"
+        )
+    )
+    decodable = [
+        fr for fr in field_results
+        if get_decoder(fr.data_type) is not None
+    ]
+    if not decodable:
+        return
+
+    total = len(decodable)
+    for i, fr in enumerate(decodable):
+        decoder = get_decoder(fr.data_type)
+        # Progress slice 95%→99% so the user sees movement during decode too.
+        _set_status(
+            scan,
+            Scan.LOCATING,
+            pct=95 + int(4 * (i / total)),
+            message=f"decoding {fr.data_type} field {i + 1}/{total}: {fr.path}",
+        )
+        page = pages_by_idx.get(fr.page_index) if fr.page_index is not None else None
+        if page is None:
+            continue
+        try:
+            img_bytes = page_image_bytes(page)
+        except Exception as exc:
+            logger.warning("could not read page bytes for fr %s: %r", fr.id, exc)
+            continue
+        bbox = tuple(fr.bbox) if fr.bbox and len(fr.bbox) == 4 else None
+        try:
+            decoded = decoder(img_bytes, bbox)
+        except Exception as exc:
+            logger.warning("decoder failed for fr %s (%s): %r", fr.id, fr.data_type, exc)
+            fr.error = (fr.error or "") + f" [decoder error: {exc!r}]"
+            fr.save(update_fields=["error"])
+            continue
+        if not decoded:
+            # Decoder didn't recognize anything. Leave LLM's marker as a hint
+            # that something was visually present, plus a soft error.
+            fr.error = (fr.error or "") + " [decoder found nothing in bbox]"
+            fr.save(update_fields=["error"])
+            continue
+        fr.original_value = decoded
+        result = canonicalize(fr.data_type, decoded, language=scan.scanner.language_hint or None)
+        fr.canonical_value = result.canonical
+        fr.error = (fr.error or "") + (f" [canon: {'; '.join(result.errors)}]" if result.errors else "")
+        fr.save(update_fields=["original_value", "canonical_value", "error"])
