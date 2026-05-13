@@ -5,17 +5,14 @@ Architecture
 ------------
 The extractor pipeline has three passes:
   1. Extract  - LLM reads the page image and returns structured JSON values.
-  2. Locate   - LLM returns a bbox per field, indicating where on the page
-                it found the value.
-  3. Decode   - For field data_types that have a registered decoder, crop
-                the page image at the located bbox and run a purpose-built
-                local decoder. Today only qr_code is wired up; the registry
-                is the extension point for future barcode/MRZ/signature
-                decoders.
+  2. Locate   - LLM returns a bbox per field (only for fields with values).
+  3. Decode   - For field data_types that have a registered decoder, run the
+                decoder against the page image. The decoder is the AUTHORITY
+                for what the value is — the LLM is a hint at most.
 
-Each decoder takes raw page PNG bytes plus a normalized [0,1] bbox and
-returns either a string (the decoded value) or None (decoder did not
-recognize anything — caller may fall back or surface as an error).
+Each decoder takes raw page PNG bytes plus an optional normalized [0,1]
+bbox and returns either a string (the decoded value) or None (decoder did
+not recognize anything).
 
 Decoders deliberately receive bytes, not Django model instances, so they
 are trivially unit-testable: synthesize a known image with segno, hand
@@ -24,34 +21,68 @@ the bytes to the decoder, assert the round-trip.
 from __future__ import annotations
 
 import io
-from typing import Callable
+from typing import Callable, Iterator
 
 from PIL import Image
 
 
-def _decode_qr_from_bytes(img_bytes: bytes, bbox_norm: tuple | None = None) -> str | None:
-    """Decode a QR code from a PNG image, optionally cropping to bbox first.
-
-    The bbox is normalized (0..1) in image coordinates. We pad the crop a
-    little because the LLM-provided bbox tends to hug the QR tightly and
-    QRCodeDetector needs the quiet zone to be present. If the cropped
-    region doesn't decode, we fall back to running detection on the full
-    image — useful when the bbox is wrong or absent.
+def _image_variants(arr) -> Iterator:
+    """Yield processed variants of an image to give the QR detector more
+    chances. Order: raw → gray → Otsu-binarized → upscaled. cv2's QR
+    detector benefits enormously from binarization on scanned-PDF input
+    where contrast is washed out.
     """
-    # Deferred import keeps Django apps that don't run extraction (admin
-    # commands, tests) from paying the cv2 import cost.
+    import cv2
+    import numpy as np  # noqa: F401  (cv2 needs numpy available)
+
+    yield arr  # raw RGB
+
+    gray = cv2.cvtColor(arr, cv2.COLOR_RGB2GRAY)
+    yield cv2.cvtColor(gray, cv2.COLOR_GRAY2RGB)
+
+    _, binary = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+    yield cv2.cvtColor(binary, cv2.COLOR_GRAY2RGB)
+
+    h, w = arr.shape[:2]
+    if max(h, w) < 800:
+        scale = 800.0 / max(h, w)
+        upscaled = cv2.resize(
+            arr, (int(w * scale), int(h * scale)), interpolation=cv2.INTER_CUBIC
+        )
+        yield upscaled
+
+
+def _detectors():
+    """Yield available cv2 QR detectors. QRCodeDetectorAruco (opencv 4.7+)
+    is significantly more accurate than the legacy QRCodeDetector — but
+    its failure modes are different, so we run both and take the first
+    non-empty result."""
+    import cv2
+
+    if hasattr(cv2, "QRCodeDetectorAruco"):
+        yield cv2.QRCodeDetectorAruco()
+    yield cv2.QRCodeDetector()
+
+
+def _decode_qr_from_bytes(img_bytes: bytes, bbox_norm: tuple | None = None) -> str | None:
+    """Decode a QR from PNG bytes, optionally cropping to bbox first.
+
+    Strategy: try the (padded) cropped region first if a bbox is given,
+    then the whole page. For each region, try several image variants
+    (raw, grayscale, Otsu-binarized, upscaled) against every available
+    detector. First non-empty match wins.
+    """
     import cv2
     import numpy as np
 
     img = Image.open(io.BytesIO(img_bytes)).convert("RGB")
     w, h = img.size
-
     full_arr = np.array(img)
-    detector = cv2.QRCodeDetector()
 
+    regions: list = []
     if bbox_norm and len(bbox_norm) == 4:
         x0, y0, x1, y1 = bbox_norm
-        # Snap to pixel coords; add ~5% padding on each side so the QR's
+        # Coerce normalized [0,1] to pixel coords; pad ~8% so the QR's
         # required quiet zone is included.
         px0 = max(0, int(x0 * w))
         py0 = max(0, int(y0 * h))
@@ -65,23 +96,27 @@ def _decode_qr_from_bytes(img_bytes: bytes, bbox_norm: tuple | None = None) -> s
         cy1 = min(h, py1 + pad_y)
         crop_arr = full_arr[cy0:cy1, cx0:cx1]
         if crop_arr.size:
-            data, _points, _straight = detector.detectAndDecode(crop_arr)
-            if data:
-                return data
+            regions.append(crop_arr)
+    regions.append(full_arr)
 
-    # Whole-page fallback. Slower because the detector scans more area,
-    # but catches cases where the locator pass gave us the wrong region
-    # (or no region at all).
-    data, _points, _straight = detector.detectAndDecode(full_arr)
-    return data or None
+    for region in regions:
+        for variant in _image_variants(region):
+            for detector in _detectors():
+                try:
+                    data, _points, _straight = detector.detectAndDecode(variant)
+                except cv2.error:
+                    continue
+                if data:
+                    return data
+    return None
 
 
-# data_type -> decoder. Returning None from a decoder means "I didn't
-# find a value"; the orchestrator keeps the LLM's original_value as a
-# marker plus surfaces an error. To add a new field-type decoder, write
-# a function with this signature and register it here.
 Decoder = Callable[[bytes, tuple | None], "str | None"]
 
+# data_type -> decoder. Returning None from a decoder means "I didn't
+# find a value"; the orchestrator clears any LLM marker. To add a new
+# field-type decoder, write a function with this signature and register
+# it here.
 _DECODER_REGISTRY: dict[str, Decoder] = {
     "qr_code": _decode_qr_from_bytes,
 }

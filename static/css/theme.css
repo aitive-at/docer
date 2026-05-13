@@ -265,6 +265,9 @@ table.data th { font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; let
 
 .schema-container-meta { display: flex; gap: 0.7rem; align-items: center; flex-wrap: wrap; padding: 0.4rem 0.7rem; margin-bottom: 0.6rem; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--bg); }
 .schema-container-meta .mono { color: var(--accent-light); margin: 0; }
+.checkbox-line { display: inline-flex; align-items: center; gap: 0.55rem; padding: 0.5rem 0; cursor: pointer; user-select: none; font-size: 0.9rem; }
+.checkbox-line input[type="checkbox"] { width: 16px; height: 16px; margin: 0; cursor: pointer; accent-color: var(--accent); }
+.checkbox-line span { color: var(--text); }
 
 /* Read-only schema viewer (scanner_detail) */
 .schema-editor.schema-readonly { border-style: solid; background: transparent; }

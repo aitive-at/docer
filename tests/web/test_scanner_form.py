@@ -98,6 +98,51 @@ def test_scanner_create_post_with_deeply_nested_schema(client_user_account):
     assert saved["fields"][1]["options"]["min_items"] == 1
 
 
+def test_editor_node_factory_defaults_field_required_to_true(client_user_account):
+    """The editor's JS nodeFactory must default new fields to required:true.
+    Verified by inspecting the rendered create form's embedded JS — saves us
+    from needing a headless browser for a one-line invariant."""
+    c, _user, account = client_user_account
+    resp = c.get(reverse("web:scanner_create", kwargs={"account_slug": account.slug}))
+    assert resp.status_code == 200
+    body = resp.content.decode()
+    # Field default
+    assert "kind: 'field'" in body
+    assert "required: true" in body, "new fields must default to required:true"
+    # Make sure we didn't accidentally leave the old default in place.
+    assert "required: false" not in body
+
+
+def test_scanner_form_renders_required_checkbox_for_existing_field(client_user_account):
+    """An existing field with required:true must render a checked checkbox.
+    Alpine's x-model binding on a checkbox is reactive — if our schema's
+    `required` property changes, the input toggles accordingly. This guard
+    catches accidental removal of the x-model binding."""
+    scanner = Scanner.objects.create(
+        account=client_user_account[2],
+        name="Required edit",
+        slug="required-edit",
+        schema_json={
+            "fields": [
+                {"kind": "field", "name": "must_have", "label": "Must Have",
+                 "data_type": "string", "required": True, "description": "", "options": {}},
+            ]
+        },
+    )
+    c = client_user_account[0]
+    resp = c.get(
+        reverse(
+            "web:scanner_edit",
+            kwargs={"account_slug": client_user_account[2].slug, "scanner_slug": scanner.slug},
+        )
+    )
+    body = resp.content.decode()
+    # The x-model binding on the required checkbox is the contract.
+    assert 'x-model="node.required"' in body
+    # Initial schema is in the JSON-script tag for Alpine to read.
+    assert '"required": true' in body or '"required":true' in body
+
+
 def test_scanner_edit_round_trip_preserves_schema(client_user_account):
     c, _user, account = client_user_account
     scanner = Scanner.objects.create(

@@ -60,8 +60,11 @@
 
   let nextId = 1;
   function nodeFactory(kind) {
-    if (kind === 'field') return { kind: 'field', name: '', label: '', data_type: 'string', required: false, description: '', options: {} };
-    if (kind === 'object') return { kind: 'object', name: '', label: '', required: false, fields: [] };
+    // New fields default to required:true — most real-world schemas have
+    // mostly-required fields, so this minimizes per-field clicking. Users
+    // uncheck the rare optional ones.
+    if (kind === 'field') return { kind: 'field', name: '', label: '', data_type: 'string', required: true, description: '', options: {} };
+    if (kind === 'object') return { kind: 'object', name: '', label: '', required: true, fields: [] };
     if (kind === 'list')  return { kind: 'list', name: '', label: '', options: { min_items: 0 }, item: { kind: 'object', fields: [] } };
     throw new Error('unknown kind ' + kind);
   }

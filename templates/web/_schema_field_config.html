@@ -16,10 +16,10 @@
     </select>
   </div>
   <div class="col field" style="max-width: 180px;">
-    <label class="mono">Required</label>
-    <label style="display:flex;align-items:center;gap:0.6rem; padding-top:0.55rem;">
-      <input type="checkbox" x-model="{{ node }}.required" style="width:auto;">
-      <span class="muted" x-text="{{ node }}.required ? 'required' : 'optional'"></span>
+    <label>Required</label>
+    <label class="checkbox-line">
+      <input type="checkbox" x-model="{{ node }}.required">
+      <span>Field must be present</span>
     </label>
   </div>
 </div>

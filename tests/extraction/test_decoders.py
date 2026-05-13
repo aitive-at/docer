@@ -61,3 +61,24 @@ def test_registry_routes_qr_code_to_decoder():
     assert get_decoder("qr_code") is _decode_qr_from_bytes
     assert get_decoder("string") is None
     assert get_decoder("currency_amount") is None
+
+
+def test_qr_decoder_handles_realistic_payloads():
+    """The realistic QR payloads on real invoices — URLs, EPC payment QR,
+    multi-line vCards — must round-trip cleanly. (cv2 has known weaknesses
+    on very-low-entropy payloads, which the LLM-marker fallback in the
+    orchestrator can paper over; we don't assert on those here.)"""
+    cases = [
+        "https://invoice.example.com/pay/INV-2024-00042?amt=199.99",
+        # EPC QR (SEPA payment) shape
+        (
+            "BCD\n002\n1\nSCT\nDEUTDEFFXXX\nAcme GmbH\nDE89370400440532013000\n"
+            "EUR199.99\n\n\nInvoice 42"
+        ),
+        # vCard with newlines
+        "BEGIN:VCARD\nVERSION:3.0\nFN:Alice\nTEL:+491701234567\nEND:VCARD",
+    ]
+    for payload in cases:
+        img_bytes = _make_qr_png(payload, scale=8, border=4)
+        decoded = _decode_qr_from_bytes(img_bytes, bbox_norm=None)
+        assert decoded == payload, f"failed round-trip for {payload[:40]!r}: got {decoded!r}"

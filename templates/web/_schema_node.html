@@ -34,9 +34,9 @@ Caller passes Alpine-expression aliases as Django template variables:
     <template x-if="{{ node }}.kind === 'object'">
       <div class="schema-node-body">
         <div class="schema-container-meta">
-          <label class="mono" style="display:flex;align-items:center;gap:0.6rem;">
-            <input type="checkbox" x-model="{{ node }}.required" style="width:auto;">
-            <span class="muted" x-text="{{ node }}.required ? 'object required' : 'object optional'"></span>
+          <label class="checkbox-line">
+            <input type="checkbox" x-model="{{ node }}.required">
+            <span>Object must be present</span>
           </label>
         </div>
         <div class="mono nested-heading">Fields</div>
