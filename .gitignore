@@ -22,3 +22,5 @@ huey.sqlite3
 huey.sqlite3-shm
 
 huey.sqlite3-wal
+
+staticfiles/
